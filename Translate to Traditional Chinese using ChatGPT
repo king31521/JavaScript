@@ -1,0 +1,69 @@
+// ==UserScript==
+// @name         Translate to Traditional Chinese using ChatGPT
+// @namespace    http://tampermonkey.net/
+// @version      1
+// @description  Translate webpage text to Traditional Chinese using ChatGPT API from OpenAI
+// @author       Your name
+// @match        *://*/*
+// @grant        GM_xmlhttpRequest
+// ==/UserScript==
+
+const openai = require('openai');
+openai.apiKey = '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';
+
+(function() {
+    'use strict';
+
+    // 翻譯的目標語言代碼
+    const targetLangCode = 'zh-TW';
+
+    // 獲取頁面上所有文字節點的列表
+    function getTextNodes() {
+        const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        const textNodes = [];
+        let currentNode;
+        while (currentNode = walker.nextNode()) {
+            textNodes.push(currentNode);
+        }
+        return textNodes;
+    }
+
+    // 將文本翻譯為繁體中文
+    async function translateText(text) {
+        const response = await openai.completions.create({
+            engine: 'text-davinci-002',
+            prompt: `translate from English to ${targetLangCode}: ${text}`,
+            maxTokens: 1024,
+            n: 1,
+            stop: ['\n']
+        });
+        return response.choices[0].text.trim();
+    }
+
+    // 將頁面上所有文字節點的內容翻譯為繁體中文
+    async function translatePage() {
+        const textNodes = getTextNodes();
+        for (const node of textNodes) {
+            const text = node.textContent.trim();
+            if (text !== '') {
+                const translatedText = await translateText(text);
+                node.textContent = translatedText;
+            }
+        }
+    }
+
+    // 監聽按鈕點擊事件
+    const button = document.createElement('button');
+    button.textContent = '翻譯為繁體中文';
+    button.style.position = 'fixed';
+    button.style.top = '10px';
+    button.style.right = '10px';
+    button.style.zIndex = '9999';
+    button.onclick = translatePage;
+    document.body.appendChild(button);
+})();
