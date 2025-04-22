@@ -4,6 +4,7 @@
 // @version      1.0
 // @description  Changes the styles of the current page
 // @match        https://www.gululuworld.com/book*
+// @match        https://ngabbs.com/*
 // @grant        none
 // ==/UserScript==
 
