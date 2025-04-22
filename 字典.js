@@ -2547,37 +2547,64 @@ TongWen.s_2_t = {
 "\ue5f1":"\u3000"
 };
 
-function toTrad(itxt){	
-	var zhmap = TongWen.s_2_t;
-		
-	itxt = itxt.replace(/[^\x00-\xFF]/g,  function(s){			
-			return ((s in zhmap)?zhmap[s]:s);
-		}
-	);
-	return 	itxt;
-}
+// 防抖轉換核心
+const convertTrad = (() => {
+  let timer, isConverting = false;
+  return () => {
+    if (isConverting) return;
+    isConverting = true;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      try {
+        const xpath = '//text()[normalize-space()][not(ancestor::script|ancestor::style)]';
+        const snapshot = document.evaluate(xpath, document, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+        for (let i = 0; i < snapshot.snapshotLength; i++) {
+          const node = snapshot.snapshotItem(i);
+          if (!node._converted) {
+            node.data = node.data.replace(/[\u4E00-\u9FA5]/g, s => TongWen.s_2_t[s] || s);
+            node._converted = true;
+          }
+        }
+      } catch (e) { console.error('Conversion error:', e); }
+      isConverting = false;
+    }, 150);
+  };
+})();
 
-function convert_trad(){
-	var curDoc = window.document;	
-	if (curDoc.evaluate){
-		//var xpr = '//text()[string-length(normalize-space(.))>0][name(..)!="SCRIPT"][name(..)!="STYLE"]';
-		var xpr = '//text()[normalize-space(.)][name(..)!="SCRIPT"][name(..)!="STYLE"]';
-		
-		var textnodes = curDoc.evaluate(xpr, curDoc,  null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,  null);
-		var textnodes_length = textnodes.snapshotLength;
-		//var curNode = null;
+// 多重監聽機制
+const initObserver = () => {
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mut => mut.type === 'characterData' || mut.addedNodes.length && convertTrad());
+  });
 
-		for (var i=0, n=textnodes_length, textNodes = textnodes; i<n; ++i) {
-			var curNode = textNodes.snapshotItem(i);
-			
-			//if (/[^\x20-\xFF]+/.test(curNode.data)){
-			//if (/%u/.test(escape(curNode.data))){
-				curNode.data = toTrad(curNode.data);
-			//}
-		}		
-	}else {
-		window.document.body.innerHTML = toTrad(window.document.body.innerHTML);
-	}
-}
+  observer.observe(document, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: false
+  });
 
-convert_trad();
+  // 事件監聽群組
+  ['DOMContentLoaded', 'load', 'popstate', 'pushState', 'replaceState'].forEach(evt => {
+    window.addEventListener(evt, convertTrad, {passive: true});
+  });
+
+  // SPA 路由監聽
+  const _pushState = history.pushState;
+  history.pushState = function() { _pushState.apply(this, arguments); convertTrad(); };
+  
+  // iframe 內容監聽
+  setInterval(() => {
+    document.querySelectorAll('iframe').forEach(frm => {
+      try { if (frm.contentDocument) observer.observe(frm.contentDocument, {subtree: true, childList: true}); } 
+      catch(e) {}
+    });
+  }, 1000);
+};
+
+// 初始化執行
+document.readyState === 'loading' 
+  ? document.addEventListener('DOMContentLoaded', initObserver)
+  : initObserver();
+
+convertTrad(); // 首次執行
