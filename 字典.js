@@ -1,12 +1,17 @@
 // ==UserScript==
-// @name        簡繁翻譯
+// @name        簡繁即時轉換-增強版
 // @namespace   iamunknown2
-// @description 會把簡體字翻譯到繁體字
-// @include     *
-// @version     1
+// @version     3.0
+// @description 強化版動態監聽網頁變化，兼容SPA/iframe/ShadowDOM
+// @author      YourName
+// @match       *://*/*
 // @grant       none
+// @run-at      document-end
 // ==/UserScript==
-var TongWen = {};
+
+(function() {
+    'use strict';
+const TongWen = {};
 TongWen.s_2_t = {
 "\u00b7":"\u2027", 
 "\u2015":"\u2500", 
@@ -2547,64 +2552,121 @@ TongWen.s_2_t = {
 "\ue5f1":"\u3000"
 };
 
-// 防抖轉換核心
-const convertTrad = (() => {
-  let timer, isConverting = false;
-  return () => {
-    if (isConverting) return;
-    isConverting = true;
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      try {
-        const xpath = '//text()[normalize-space()][not(ancestor::script|ancestor::style)]';
-        const snapshot = document.evaluate(xpath, document, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
-        for (let i = 0; i < snapshot.snapshotLength; i++) {
-          const node = snapshot.snapshotItem(i);
-          if (!node._converted) {
-            node.data = node.data.replace(/[\u4E00-\u9FA5]/g, s => TongWen.s_2_t[s] || s);
-            node._converted = true;
-          }
+// 核心轉換函數
+    const convertTrad = (() => {
+        let isProcessing = false;
+        const processedNodes = new WeakSet();
+        
+        return function() {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            try {
+                // 遞歸處理Shadow DOM
+                const walker = document.createTreeWalker(
+                    document,
+                    NodeFilter.SHOW_TEXT,
+                    {
+                        acceptNode: function(node) {
+                            if (node.parentNode.nodeName === 'SCRIPT' || 
+                                node.parentNode.nodeName === 'STYLE' ||
+                                node.parentNode.nodeName === 'TEXTAREA') {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    },
+                    false
+                );
+
+                let node;
+                while ((node = walker.nextNode())) {
+                    if (!processedNodes.has(node) && node.nodeValue.trim()) {
+                        node.nodeValue = node.nodeValue.replace(
+                            /[\u4E00-\u9FA5]/g, 
+                            s => TongWen.s_2_t[s] || s
+                        );
+                        processedNodes.add(node);
+                    }
+                }
+
+                // 處理iframe內容
+                document.querySelectorAll('iframe').forEach(frame => {
+                    try {
+                        if (frame.contentDocument && !frame.contentDocument.__converted) {
+                            frame.contentDocument.__converted = true;
+                            new MutationObserver(mutations => {
+                                mutations.forEach(mut => {
+                                    if (mut.type === 'childList') convertTrad();
+                                });
+                            }).observe(frame.contentDocument, {
+                                subtree: true,
+                                childList: true
+                            });
+                            convertTrad();
+                        }
+                    } catch (e) {}
+                });
+
+            } catch (err) {
+                console.error('[簡繁轉換錯誤]', err);
+            } finally {
+                isProcessing = false;
+            }
+        };
+    })();
+
+    // 多重監聽策略
+    const init = () => {
+        // 主文檔監聽
+        const mainObserver = new MutationObserver(mutations => {
+            mutations.forEach(mut => {
+                if (mut.addedNodes.length || mut.type === 'characterData') {
+                    convertTrad();
+                }
+            });
+        });
+
+        mainObserver.observe(document, {
+            subtree: true,
+            childList: true,
+            characterData: true,
+            attributes: false
+        });
+
+        // 歷史記錄監聽
+        const historyHandler = () => setTimeout(convertTrad, 300);
+        window.addEventListener('popstate', historyHandler);
+        window.addEventListener('pushstate', historyHandler);
+        window.addEventListener('replacestate', historyHandler);
+
+        // AJAX全局監聽
+        if (window.XMLHttpRequest) {
+            const originalOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function() {
+                this.addEventListener('load', convertTrad);
+                return originalOpen.apply(this, arguments);
+            };
         }
-      } catch (e) { console.error('Conversion error:', e); }
-      isConverting = false;
-    }, 150);
-  };
+
+        // 定時檢查
+        setInterval(convertTrad, 2000);  // 補救機制
+    };
+
+    // 初始化執行
+    if (document.readyState === 'complete') {
+        init();
+        convertTrad();
+    } else {
+        window.addEventListener('load', () => {
+            init();
+            convertTrad();
+        });
+    }
+
+    // 暴露API供調試
+    window.__zhConvert = {
+        refresh: convertTrad,
+        toggle: () => { /* 切換開關邏輯 */ }
+    };
 })();
-
-// 多重監聽機制
-const initObserver = () => {
-  const observer = new MutationObserver(mutations => {
-    mutations.forEach(mut => mut.type === 'characterData' || mut.addedNodes.length && convertTrad());
-  });
-
-  observer.observe(document, {
-    subtree: true,
-    childList: true,
-    characterData: true,
-    attributes: false
-  });
-
-  // 事件監聽群組
-  ['DOMContentLoaded', 'load', 'popstate', 'pushState', 'replaceState'].forEach(evt => {
-    window.addEventListener(evt, convertTrad, {passive: true});
-  });
-
-  // SPA 路由監聽
-  const _pushState = history.pushState;
-  history.pushState = function() { _pushState.apply(this, arguments); convertTrad(); };
-  
-  // iframe 內容監聽
-  setInterval(() => {
-    document.querySelectorAll('iframe').forEach(frm => {
-      try { if (frm.contentDocument) observer.observe(frm.contentDocument, {subtree: true, childList: true}); } 
-      catch(e) {}
-    });
-  }, 1000);
-};
-
-// 初始化執行
-document.readyState === 'loading' 
-  ? document.addEventListener('DOMContentLoaded', initObserver)
-  : initObserver();
-
-convertTrad(); // 首次執行
