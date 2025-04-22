@@ -1,3 +1,11 @@
+// ==UserScript==
+// @name        簡繁翻譯
+// @namespace   iamunknown2
+// @description 會把簡體字翻譯到繁體字
+// @include     *
+// @version     1
+// @grant       none
+// ==/UserScript==
 var TongWen = {};
 TongWen.s_2_t = {
 "\u00b7":"\u2027", 
