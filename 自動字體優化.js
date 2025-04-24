@@ -46,7 +46,7 @@
         initValue() {
             let value = [{
                 name: 'current_val',
-                value: 1 // 強制最大值
+                value: 0.7 // 強制最大值
             }, {
                 name: 'has_init',
                 value: true // 跳過初始化
