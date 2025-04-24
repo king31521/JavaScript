@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         自動字體優化
-// @description  自動應用最大清晰度+系統字體優化
+// @description  自動應用最大清晰度1現默認0+系統字體優化
 // @author       油小猴
 // @match        *://*/*
 // @grant        GM_getValue
@@ -46,7 +46,7 @@
         initValue() {
             let value = [{
                 name: 'current_val',
-                value: 0.25 // 強制最大值
+                value: 0 // 強制最大值
             }, {
                 name: 'has_init',
                 value: true // 跳過初始化
