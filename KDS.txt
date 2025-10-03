@@ -46,7 +46,6 @@ TVBS新聞,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-onl
 ELTA體育1台,https://www.kds.tw/tv/sports-tv-live-streaming/elta-sports-1/
 ELTA體育2台,https://www.kds.tw/tv/sports-tv-live-streaming/elta-sports-2/
 ELTA體育3台,https://www.kds.tw/tv/sports-tv-live-streaming/elta-sports-3/
-寰宇台灣台,https://www.4gtv.tv/channel/4gtv-4gtv156?set=1&ch=280
 
 旅遊頻道,#genre#
 parse=1
@@ -170,6 +169,9 @@ TV5MONDE STYLE HD 生活時尚,https://www.4gtv.tv/channel/4gtv-live122?set=1&ch
 滾動力rollor,https://www.4gtv.tv/channel/4gtv-live012?set=1&ch=249
 豬哥亮歌廳秀,https://www.4gtv.tv/channel/4gtv-4gtv006?set=1&ch=113
 戲劇免費看 1台,https://www.4gtv.tv/channel/4gtv-live010?set=1&ch=270
+
+秒開4gtv,#genre#
+
 寰宇閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/li-4gtv-4gtv156/index.m3u8?proxy=true
 寰宇閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/of-4gtv-4gtv156/index.m3u8?proxy=true
 tvbs閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/li-4gtv-4gtv073/index.m3u8?proxy=true
