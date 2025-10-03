@@ -172,10 +172,130 @@ TV5MONDE STYLE HD 生活時尚,https://www.4gtv.tv/channel/4gtv-live122?set=1&ch
 
 秒開4gtv,#genre#
 
-寰宇閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/li-4gtv-4gtv156/index.m3u8?proxy=true
-寰宇閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/of-4gtv-4gtv156/index.m3u8?proxy=true
-tvbs閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/li-4gtv-4gtv073/index.m3u8?proxy=true
 壹新聞,https://live.catvod.com/catvod_com.php?id=yinews&token=822ce4924d83cf974e41489f7cfa97546e992ba805b71c7615edef0601dfaa72%3A1758411209
+
+#EXTM3U x-tvg-url="https://live.fanmingming.cn/e.xml"
+
+#EXTINF:-1 tvg-name="TVBS新聞" tvg-logo="https://live.fanmingming.cn/tv/TVBS新聞.png" group-title="3065",TVBS新聞
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv072
+#EXTINF:-1 tvg-name="東森新聞" tvg-logo="https://live.fanmingming.cn/tv/東森新聞.png" group-title="3065",東森新聞
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv152
+#EXTINF:-1 tvg-name="東森財經" tvg-logo="https://live.fanmingming.cn/tv/東森財經.png" group-title="3065",東森財經
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv153
+#EXTINF:-1 tvg-name="民視新聞" tvg-logo="https://live.fanmingming.cn/tv/民視新聞.png" group-title="3065",民視新聞
+http://3065.koyeb.app/3065.php?id=litv-ftv13
+#EXTINF:-1 tvg-name="華視新聞" tvg-logo="https://live.fanmingming.cn/tv/華視新聞.png" group-title="3065",華視新聞
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv052
+#EXTINF:-1 tvg-name="中視新聞" tvg-logo="https://live.fanmingming.cn/tv/中視新聞.png" group-title="3065",中視新聞
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv074
+#EXTINF:-1 tvg-name="台視新聞" tvg-logo="https://live.fanmingming.cn/tv/台視新聞.png" group-title="3065",台視新聞
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv051
+#EXTINF:-1 tvg-name="台視財經" tvg-logo="https://live.fanmingming.cn/tv/台視財經.png" group-title="3065",台視財經
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv056
+#EXTINF:-1 tvg-name="寰宇新聞" tvg-logo="https://live.fanmingming.cn/tv/寰宇新聞.png" group-title="3065",寰宇新聞
+http://3065.koyeb.app/3065.php?id=litv-longturn14
+#EXTINF:-1 tvg-name="寰宇台灣" tvg-logo="https://live.fanmingming.cn/tv/寰宇台灣.png" group-title="3065",寰宇台灣
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv156
+#EXTINF:-1 tvg-name="寰宇財經" tvg-logo="https://live.fanmingming.cn/tv/寰宇財經.png" group-title="3065",寰宇財經
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv158
+#EXTINF:-1 tvg-name="非凡新聞" tvg-logo="https://live.fanmingming.cn/tv/非凡新聞.png" group-title="3065",非凡新聞
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv010
+#EXTINF:-1 tvg-name="非凡商業" tvg-logo="https://live.fanmingming.cn/tv/非凡商業.png" group-title="3065",非凡商業
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv048
+#EXTINF:-1 tvg-name="華視" tvg-logo="https://live.fanmingming.cn/tv/華視.png" group-title="3065",華視
+http://adorable-davita-2d133c54.koyeb.app/smt.php?id=ctshd_twn
+#EXTINF:-1 tvg-name="中視" tvg-logo="https://live.fanmingming.cn/tv/中視.png" group-title="3065",中視
+http://adorable-davita-2d133c54.koyeb.app/smt.php?id=zhongshihd_twn
+#EXTINF:-1 tvg-name="台視" tvg-logo="https://live.fanmingming.cn/tv/台視.png" group-title="3065",台視
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv066
+#EXTINF:-1 tvg-name="民視" tvg-logo="https://live.fanmingming.cn/tv/民視.png" group-title="3065",民視
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv155
+#EXTINF:-1 tvg-name="民視旅遊台" tvg-logo="https://live.fanmingming.cn/tv/民視旅遊台.png" group-title="3065",民視旅遊台
+http://3065.koyeb.app/3065.php?id=litv-ftv07
+#EXTINF:-1 tvg-name="亞洲旅遊台" tvg-logo="https://live.fanmingming.cn/tv/亞洲旅遊台.png" group-title="3065",亞洲旅遊台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv076
+#EXTINF:-1 tvg-name="Smart知識台" tvg-logo="https://live.fanmingming.cn/tv/Smart知識台.png" group-title="3065",Smart知識台
+http://3065.koyeb.app/3065.php?id=litv-longturn19
+#EXTINF:-1 tvg-name="靖天日本台" tvg-logo="https://live.fanmingming.cn/tv/靖天日本台.png" group-title="3065",靖天日本台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv047
+#EXTINF:-1 tvg-name="靖天育樂台" tvg-logo="https://live.fanmingming.cn/tv/靖天育樂台.png" group-title="3065",靖天育樂台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv062
+#EXTINF:-1 tvg-name="靖天映畫台" tvg-logo="https://live.fanmingming.cn/tv/靖天映畫台.png" group-title="3065",靖天映畫台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv055
+#EXTINF:-1 tvg-name="靖天國際台" tvg-logo="https://live.fanmingming.cn/tv/靖天國際台.png" group-title="3065",靖天國際台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv063
+#EXTINF:-1 tvg-name="靖天資訊台" tvg-logo="https://live.fanmingming.cn/tv/靖天資訊台.png" group-title="3065",靖天資訊台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv065
+#EXTINF:-1 tvg-name="靖天電影台" tvg-logo="https://live.fanmingming.cn/tv/靖天電影台.png" group-title="3065",靖天電影台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv061
+#EXTINF:-1 tvg-name="靖天綜合台" tvg-logo="https://live.fanmingming.cn/tv/靖天綜合台.png" group-title="3065",靖天綜合台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv046
+#EXTINF:-1 tvg-name="靖天戲劇台" tvg-logo="https://live.fanmingming.cn/tv/靖天戲劇台.png" group-title="3065",靖天戲劇台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv058
+#EXTINF:-1 tvg-name="靖天歡樂台" tvg-logo="https://live.fanmingming.cn/tv/靖天歡樂台.png" group-title="3065",靖天歡樂台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv054
+#EXTINF:-1 tvg-name="靖洋戲劇台" tvg-logo="https://live.fanmingming.cn/tv/靖洋戲劇台.png" group-title="3065",靖洋戲劇台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv045
+
+#EXTINF:-1 tvg-name="龍華電影台" tvg-logo="https://live.fanmingming.cn/tv/龍華電影台.png" group-title="3065",龍華電影台
+http://3065.koyeb.app/3065.php?id=litv-longturn03
+#EXTINF:-1 tvg-name="龍華洋片台" tvg-logo="https://live.fanmingming.cn/tv/龍華洋片台.png" group-title="3065",龍華洋片台
+http://3065.koyeb.app/3065.php?id=litv-longturn02
+#EXTINF:-1 tvg-name="龍華經典台" tvg-logo="https://live.fanmingming.cn/tv/龍華經典台.png" group-title="3065",龍華經典台
+http://3065.koyeb.app/3065.php?id=litv-longturn21
+#EXTINF:-1 tvg-name="龍華日韓台" tvg-logo="https://live.fanmingming.cn/tv/龍華日韓台.png" group-title="3065",龍華日韓台
+http://3065.koyeb.app/3065.php?id=litv-longturn11
+#EXTINF:-1 tvg-name="龍華偶像台" tvg-logo="https://live.fanmingming.cn/tv/龍華偶像台.png" group-title="3065",龍華偶像台
+http://3065.koyeb.app/3065.php?id=litv-longturn12
+#EXTINF:-1 tvg-name="龍華戲劇台" tvg-logo="https://live.fanmingming.cn/tv/龍華戲劇台.png" group-title="3065",龍華戲劇台
+http://3065.koyeb.app/3065.php?id=litv-longturn18
+
+#EXTINF:-1 tvg-name="TVBS" tvg-logo="https://live.fanmingming.cn/tv/TVBS.png" group-title="3065",TVBS
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv073
+#EXTINF:-1 tvg-name="TVBS精采台" tvg-logo="https://live.fanmingming.cn/tv/TVBS精采台.png" group-title="3065",TVBS精采台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv067
+#EXTINF:-1 tvg-name="TVBS歡樂台" tvg-logo="https://live.fanmingming.cn/tv/TVBS歡樂台.png" group-title="3065",TVBS歡樂台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv068
+
+
+#EXTINF:-1 tvg-name="民視台灣台" tvg-logo="https://live.fanmingming.cn/tv/民視台灣台.png" group-title="3065",民視台灣台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv001
+#EXTINF:-1 tvg-name="民視第一台" tvg-logo="https://live.fanmingming.cn/tv/民視第一台.png" group-title="3065",民視第一台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv003
+#EXTINF:-1 tvg-name="民視綜藝台" tvg-logo="https://live.fanmingming.cn/tv/民視綜藝台.png" group-title="3065",民視綜藝台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv004
+#EXTINF:-1 tvg-name="民視影劇台" tvg-logo="https://live.fanmingming.cn/tv/民視影劇台.png" group-title="3065",民視影劇台
+http://3065.koyeb.app/3065.php?id=litv-ftv09
+#EXTINF:-1 tvg-name="采昌影劇台" tvg-logo="https://live.fanmingming.cn/tv/采昌影劇台.png" group-title="3065",采昌影劇台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv049
+
+#EXTINF:-1 tvg-name="影迷數位電影台" tvg-logo="https://live.fanmingming.cn/tv/影迷數位電影台.png" group-title="3065",影迷數位電影台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv011
+#EXTINF:-1 tvg-name="視納華仁紀實頻道" tvg-logo="https://live.fanmingming.cn/tv/視納華仁紀實頻道.png" group-title="3065",視納華仁紀實頻道
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv013
+#EXTINF:-1 tvg-name="愛爾達娛樂台" tvg-logo="https://live.fanmingming.cn/tv/愛爾達娛樂台.png" group-title="3065",愛爾達娛樂台
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv070
+#EXTINF:-1 tvg-name="達文西頻道" tvg-logo="https://live.fanmingming.cn/tv/達文西頻道.png" group-title="3065",達文西頻道
+http://3065.koyeb.app/3065.php?id=4gtv-4gtv018
+#EXTINF:-1 tvg-name="影迷數位紀實台" tvg-logo="https://live.fanmingming.cn/tv/影迷數位紀實台.png" group-title="3065",影迷數位紀實台
+http://3065.koyeb.app/3065.php?id=litv-ftv15
+
+#EXTINF:-1 tvg-name="博斯魅力台" tvg-logo="https://live.fanmingming.cn/tv/博斯魅力台.png" group-title="3065",博斯魅力台
+http://3065.koyeb.app/3065.php?id=litv-longturn04
+#EXTINF:-1 tvg-name="博斯高球台" tvg-logo="https://live.fanmingming.cn/tv/博斯高球台.png" group-title="3065",博斯高球台
+http://3065.koyeb.app/3065.php?id=litv-longturn05
+#EXTINF:-1 tvg-name="博斯高球二台" tvg-logo="https://live.fanmingming.cn/tv/博斯高球二台.png" group-title="3065",博斯高球二台
+http://3065.koyeb.app/3065.php?id=litv-longturn06
+#EXTINF:-1 tvg-name="博斯運動一台" tvg-logo="https://live.fanmingming.cn/tv/博斯運動一台.png" group-title="3065",博斯運動一台
+http://3065.koyeb.app/3065.php?id=litv-longturn07
+#EXTINF:-1 tvg-name="博斯運動二台" tvg-logo="https://live.fanmingming.cn/tv/博斯運動二台.png" group-title="3065",博斯運動二台
+http://3065.koyeb.app/3065.php?id=litv-longturn08
+#EXTINF:-1 tvg-name="博斯網球台" tvg-logo="https://live.fanmingming.cn/tv/博斯網球台.png" group-title="3065",博斯網球台
+http://3065.koyeb.app/3065.php?id=litv-longturn09
+#EXTINF:-1 tvg-name="博斯無限台" tvg-logo="https://live.fanmingming.cn/tv/博斯無限台.png" group-title="3065",博斯無限台
+http://3065.koyeb.app/3065.php?id=litv-longturn10
+#EXTINF:-1 tvg-name="博斯無限二台" tvg-logo="https://live.fanmingming.cn/tv/博斯無限二台.png" group-title="3065",博斯無限二台
+http://3065.koyeb.app/3065.php?id=litv-longturn13
 
 VIP頻道,#genre#
 🈲驚艷臺,http://125.227.210.55:8156/VideoInput/play.ts
