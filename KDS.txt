@@ -175,6 +175,7 @@ TV5MONDE STYLE HD 生活時尚,https://www.4gtv.tv/channel/4gtv-live122?set=1&ch
 寰宇閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/li-4gtv-4gtv156/index.m3u8?proxy=true
 寰宇閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/of-4gtv-4gtv156/index.m3u8?proxy=true
 tvbs閩南4Gtv,http://xn--elt51t.azip.dpdns.org:5008/li-4gtv-4gtv073/index.m3u8?proxy=true
+壹新聞,https://live.catvod.com/catvod_com.php?id=yinews&token=822ce4924d83cf974e41489f7cfa97546e992ba805b71c7615edef0601dfaa72%3A1758411209
 
 VIP頻道,#genre#
 🈲驚艷臺,http://125.227.210.55:8156/VideoInput/play.ts
