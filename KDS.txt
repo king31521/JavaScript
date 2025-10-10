@@ -237,6 +237,7 @@ TVBS歡樂台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv068
 韓國娛樂台 KMTV,http://3065.koyeb.app/3065.php?id=4gtv-4gtv016
 
 VIP頻道,#genre#
+
 🈲驚艷臺,http://125.227.210.55:8156/VideoInput/play.ts
 🍌香蕉臺,http://125.227.210.55:8159/VideoInput/play.ts
 🍌香蕉臺,http://18.svi-studio.com:80/live/176619383282/537544338952/4.m3u8
