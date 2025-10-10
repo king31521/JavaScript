@@ -7,7 +7,6 @@ parse=1
 緯來體育,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-online/videoland-sports-channel
 緯來育樂,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-online/videoland-max-tv
 緯來精彩,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-online/videoland-gtv
-
 東森幼幼,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-online/yoyo-tv
 東森電影,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-online/ettv-movie
 東森洋片,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-online/ettv-western
@@ -54,7 +53,6 @@ parse=1
 亞洲旅遊台,https://www.4gtv.tv/channel/4gtv-4gtv076?set=1&ch=250
 愛爾達生活旅遊台,https://www.4gtv.tv/channel/4gtv-live120?set=1&ch=237
 霹靂布袋戲,https://www.4gtv.tv/channel/4gtv-live145?set=1&ch=301
-
 TVBS新聞台,https://www.4gtv.tv/channel/4gtv-4gtv072?set=1&ch=291
 東森新聞台,https://www.4gtv.tv/channel/4gtv-4gtv152?set=1&ch=292
 東森財經台,https://www.4gtv.tv/channel/4gtv-4gtv153?set=1&ch=293
@@ -63,21 +61,16 @@ TVBS新聞台,https://www.4gtv.tv/channel/4gtv-4gtv072?set=1&ch=291
 中天新聞台,https://www.4gtv.tv/channel/4gtv-4gtv009?set=1&ch=30
 華視新聞台,https://www.4gtv.tv/channel/4gtv-4gtv052?set=1&ch=34
 中視新聞台,https://www.4gtv.tv/channel/4gtv-4gtv074?set=1&ch=33
-
 寰宇台灣台,https://www.4gtv.tv/channel/4gtv-4gtv156?set=1&ch=280
 寰宇新聞台,https://www.4gtv.tv/channel/litv-longturn14?set=1&ch=36
 鏡新聞台,https://www.4gtv.tv/channel/4gtv-4gtv075?set=1&ch=268
-
 華視,https://www.4gtv.tv/channel/4gtv-4gtv041?set=1&ch=6
 中視,https://www.4gtv.tv/channel/4gtv-4gtv040?set=1&ch=4
 民視,https://www.4gtv.tv/channel/4gtv-4gtv002?set=1&ch=3
-
 民視旅遊台,https://www.4gtv.tv/channel/litv-ftv07?set=1&ch=61
 亞洲旅遊台,https://www.4gtv.tv/channel/4gtv-4gtv076?set=1&ch=250
 愛爾達生活旅遊台,https://www.4gtv.tv/channel/4gtv-live120?set=1&ch=237
 霹靂布袋戲,https://www.4gtv.tv/channel/4gtv-live145?set=1&ch=301
-
-
 靖天日本台,https://www.4gtv.tv/channel/4gtv-4gtv047?set=1&ch=22
 靖天育樂台,https://www.4gtv.tv/channel/4gtv-4gtv062?set=1&ch=83
 靖天映畫台,https://www.4gtv.tv/channel/4gtv-4gtv055?set=1&ch=42
@@ -90,8 +83,6 @@ TVBS新聞台,https://www.4gtv.tv/channel/4gtv-4gtv072?set=1&ch=291
 靖天歡樂台,https://www.4gtv.tv/channel/4gtv-4gtv054?set=1&ch=119
 靖天卡通台,https://www.4gtv.tv/channel/4gtv-4gtv044?set=1&ch=15
 靖洋卡通台,https://www.4gtv.tv/channel/4gtv-4gtv057?set=1&ch=59
-
-
 TVBS,https://www.4gtv.tv/channel/4gtv-4gtv073?set=1&ch=183
 TVBS台劇台,https://www.4gtv.tv/channel/4gtv-live088?set=1&ch=285
 TVBS精采台,https://www.4gtv.tv/channel/4gtv-4gtv067?set=1&ch=227
@@ -102,19 +93,16 @@ TVBS歡樂台,https://www.4gtv.tv/channel/4gtv-4gtv068?set=1&ch=184
 中視菁采台,https://www.4gtv.tv/channel/4gtv-4gtv064?set=1&ch=123
 中視經典台,https://www.4gtv.tv/channel/4gtv-4gtv080?set=1&ch=124
 三立綜合台,https://www.4gtv.tv/channel/4gtv-live207?set=1&ch=169
-
 民視台灣台,https://www.4gtv.tv/channel/4gtv-4gtv001?set=1&ch=2
 民視第一台,https://www.4gtv.tv/channel/4gtv-4gtv003?set=1&ch=1
 民視影劇台,https://www.4gtv.tv/channel/litv-ftv09?set=1&ch=24
 民視綜藝台,https://www.4gtv.tv/channel/4gtv-4gtv004?set=1&ch=16
 采昌影劇台,https://www.4gtv.tv/channel/4gtv-4gtv049?set=1&ch=25
 公視戲劇,https://www.4gtv.tv/channel/4gtv-4gtv042?set=1&ch=7
-
 amc電影台,https://www.4gtv.tv/channel/4gtv-4gtv017?set=1&ch=39
 我的歐洲電影,https://www.4gtv.tv/channel/litv-ftv10?set=1&ch=463
 History 歷史頻道,https://www.4gtv.tv/channel/4gtv-live026?set=1&ch=214
 Love Nature,https://www.4gtv.tv/channel/4gtv-live208?set=1&ch=139
-
 Nick Jr. 兒童頻道,https://www.4gtv.tv/channel/4gtv-live032?set=1&ch=219
 尼克兒童頻道,https://www.4gtv.tv/channel/4gtv-live105?set=1&ch=185
 Pet Club TV,https://www.4gtv.tv/channel/4gtv-4gtv110?set=1&ch=464
@@ -122,7 +110,6 @@ DreamWorks 夢工廠動畫,https://www.4gtv.tv/channel/4gtv-live017?set=1&ch=282
 愛爾達娛樂台,https://www.4gtv.tv/channel/4gtv-4gtv070?set=1&ch=19
 韓國娛樂台 KMTV,https://www.4gtv.tv/channel/4gtv-4gtv016?set=1&ch=446
 幸福空間居家台,https://www.4gtv.tv/channel/4gtv-live206?set=1&ch=168
-
 經典卡通台,https://www.4gtv.tv/channel/4gtv-live022?set=1&ch=202
 經典電影台,https://www.4gtv.tv/channel/4gtv-live021?set=1&ch=201
 達文西頻道,https://www.4gtv.tv/channel/4gtv-4gtv018?set=1&ch=11
@@ -130,7 +117,6 @@ DreamWorks 夢工廠動畫,https://www.4gtv.tv/channel/4gtv-live017?set=1&ch=282
 精選動漫台,https://www.4gtv.tv/channel/4gtv-live024?set=1&ch=204
 影迷數位紀實台,https://www.4gtv.tv/channel/litv-ftv15?set=1&ch=445
 影迷數位電影台,https://www.4gtv.tv/channel/4gtv-4gtv011?set=1&ch=40
-
 ARIRANG阿裡郎頻道,https://www.4gtv.tv/channel/4gtv-4gtv079?set=1&ch=189
 Bloomberg TV,https://www.4gtv.tv/channel/4gtv-live059?set=1&ch=283
 CI 罪案偵查頻道,https://www.4gtv.tv/channel/4gtv-live027?set=1&ch=215
@@ -170,7 +156,7 @@ TV5MONDE STYLE HD 生活時尚,https://www.4gtv.tv/channel/4gtv-live122?set=1&ch
 豬哥亮歌廳秀,https://www.4gtv.tv/channel/4gtv-4gtv006?set=1&ch=113
 戲劇免費看 1台,https://www.4gtv.tv/channel/4gtv-live010?set=1&ch=270
 
-秒開4gtv,#genre#
+經典動畫直播,#genre#
 
 壹新聞,https://live.catvod.com/catvod_com.php?id=yinews&token=822ce4924d83cf974e41489f7cfa97546e992ba805b71c7615edef0601dfaa72%3A1758411209
 柯南劇場版,http://iptv.jxpan.vip:18888/aio/huya/30080236
@@ -188,6 +174,67 @@ TV5MONDE STYLE HD 生活時尚,https://www.4gtv.tv/channel/4gtv-live122?set=1&ch
 我們這一家,https://www.youtube.com/watch?v=XvZCYDICPW8
 新哆啦A夢,https://www.youtube.com/watch?v=1tawwsoLhKY
 蠟筆小新TV版,https://www.youtube.com/watch?v=bVZ2efejj3I
+
+3065,#genre#
+
+TVBS新聞,http://3065.koyeb.app/3065.php?id=4gtv-4gtv072
+東森新聞,http://3065.koyeb.app/3065.php?id=4gtv-4gtv152
+東森財經,http://3065.koyeb.app/3065.php?id=4gtv-4gtv153
+民視新聞,http://3065.koyeb.app/3065.php?id=litv-ftv13
+華視新聞,http://3065.koyeb.app/3065.php?id=4gtv-4gtv052
+中視新聞,http://3065.koyeb.app/3065.php?id=4gtv-4gtv074
+台視新聞,http://3065.koyeb.app/3065.php?id=4gtv-4gtv051
+台視財經,http://3065.koyeb.app/3065.php?id=4gtv-4gtv056
+寰宇新聞,http://3065.koyeb.app/3065.php?id=litv-longturn14
+寰宇台灣,http://3065.koyeb.app/3065.php?id=4gtv-4gtv156
+寰宇財經,http://3065.koyeb.app/3065.php?id=4gtv-4gtv158
+非凡新聞,http://3065.koyeb.app/3065.php?id=4gtv-4gtv010
+非凡商業,http://3065.koyeb.app/3065.php?id=4gtv-4gtv048
+華視,http://adorable-davita-2d133c54.koyeb.app/smt.php?id=ctshd_twn
+中視,http://adorable-davita-2d133c54.koyeb.app/smt.php?id=zhongshihd_twn
+台視,http://3065.koyeb.app/3065.php?id=4gtv-4gtv066
+民視,http://3065.koyeb.app/3065.php?id=4gtv-4gtv155
+民視旅遊台,http://3065.koyeb.app/3065.php?id=litv-ftv07
+亞洲旅遊台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv076
+Smart知識台,http://3065.koyeb.app/3065.php?id=litv-longturn19
+靖天日本台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv047
+靖天育樂台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv062
+靖天映畫台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv055
+靖天國際台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv063
+靖天資訊台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv065
+靖天電影台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv061
+靖天綜合台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv046
+靖天戲劇台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv058
+靖天歡樂台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv054
+靖洋戲劇台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv045
+龍華電影台,http://3065.koyeb.app/3065.php?id=litv-longturn03
+龍華洋片台,http://3065.koyeb.app/3065.php?id=litv-longturn02
+龍華經典台,http://3065.koyeb.app/3065.php?id=litv-longturn21
+龍華日韓台,http://3065.koyeb.app/3065.php?id=litv-longturn11
+龍華偶像台,http://3065.koyeb.app/3065.php?id=litv-longturn12
+龍華戲劇台,http://3065.koyeb.app/3065.php?id=litv-longturn18
+TVBS,http://3065.koyeb.app/3065.php?id=4gtv-4gtv073
+TVBS精采台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv067
+TVBS歡樂台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv068
+民視台灣台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv001
+民視第一台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv003
+民視綜藝台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv004
+民視影劇台,http://3065.koyeb.app/3065.php?id=litv-ftv09
+采昌影劇台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv049
+影迷數位電影台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv011
+視納華仁紀實頻道,http://3065.koyeb.app/3065.php?id=4gtv-4gtv013
+愛爾達娛樂台,http://3065.koyeb.app/3065.php?id=4gtv-4gtv070
+達文西頻道,http://3065.koyeb.app/3065.php?id=4gtv-4gtv018
+影迷數位紀實台,http://3065.koyeb.app/3065.php?id=litv-ftv15
+博斯魅力台,http://3065.koyeb.app/3065.php?id=litv-longturn04
+博斯高球台,http://3065.koyeb.app/3065.php?id=litv-longturn05
+博斯高球二台,http://3065.koyeb.app/3065.php?id=litv-longturn06
+博斯運動一台,http://3065.koyeb.app/3065.php?id=litv-longturn07
+博斯運動二台,http://3065.koyeb.app/3065.php?id=litv-longturn08
+博斯網球台,http://3065.koyeb.app/3065.php?id=litv-longturn09
+博斯無限台,http://3065.koyeb.app/3065.php?id=litv-longturn10
+博斯無限二台,http://3065.koyeb.app/3065.php?id=litv-longturn13
+韓國娛樂台 KMTV,http://3065.koyeb.app/3065.php?id=4gtv-4gtv016
 
 VIP頻道,#genre#
 🈲驚艷臺,http://125.227.210.55:8156/VideoInput/play.ts
