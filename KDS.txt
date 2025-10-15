@@ -158,7 +158,7 @@ TV5MONDE STYLE HD 生活時尚,https://www.4gtv.tv/channel/4gtv-live122?set=1&ch
 
 經典動畫直播,#genre#
 
-壹新聞,https://live.catvod.com/catvod_com.php?id=yinews&token=822ce4924d83cf974e41489f7cfa97546e992ba805b71c7615edef0601dfaa72%3A1758411209
+壹新聞,https://live.catvod.com/live.php?id=yinews&token=082a72be7c105423dd78dabd3c3419a30c1e57440bf4443eb8fd12e4d773d5d9%3A1760495606%3AMjYwNzpmMTMwOjA6MTdmOjozMGU3OjdmYjQ%3D
 柯南劇場版,http://iptv.jxpan.vip:18888/aio/huya/30080236
 蠟筆小新,http://iptv.jxpan.vip:18888/aio/huya/11352970
 櫻桃小丸子,http://iptv.jxpan.vip:18888/aio/huya/11342394
