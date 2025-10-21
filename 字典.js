@@ -4,7 +4,7 @@
 // @version 1.1 
 // @description 即時監聽並替換文字，兼容 SPA、iframe、Shadow DOM，並即時處理動態變化
 // @author YourName
-// @match :://*/ 
+// @match *://*/* 
 // @grant none 
 // @run-at document-end 
 // ==/UserScript== 
