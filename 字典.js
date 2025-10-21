@@ -1,17 +1,18 @@
-// ==UserScript==
-// @name        簡繁即時轉換-即時版
-// @namespace   iamunknown2
-// @version     3.1
-// @description 即時監聽並替換文字，兼容 SPA、iframe、Shadow DOM
-// @author      YourName
-// @match       ://*/
-// @grant       none
-// @run-at      document-end
-// ==/UserScript==
-(function () {
+// ==UserScript== 
+// @name 簡繁即時轉換-即時版
+// @namespace iamunknown2
+// @version 1.1 
+// @description 即時監聽並替換文字，兼容 SPA、iframe、Shadow DOM，並即時處理動態變化
+// @author YourName
+// @match :://*/ 
+// @grant none 
+// @run-at document-end 
+// ==/UserScript== 
+(function () { 
     'use strict';
-    const TongWen = {
-        s_2_t: {
+
+const TongWen = { 
+    s_2_t: {
 "\u00b7":"\u2027",
 "\u2015":"\u2500",
 "\u2016":"\u2225",
@@ -2549,190 +2550,33 @@
 "\u9f9b":"\u9f95",
 "\u9f9f":"\u9f9c",
 "\ue5f1":"\u3000"
+    } 
 };
-TongWen.keys = Object.keys(TongWen.s_2_t);
-    if (TongWen.keys.length) {
-        const esc = TongWen.keys.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
-        TongWen.charsToDetectRegex = new RegExp((${esc.join('|')}));
-        TongWen.replacementRegex = new RegExp(esc.join('|'), 'g');
-    } else {
-        TongWen.charsToDetectRegex = null;
-        TongWen.replacementRegex = null;
-    }
 
-    const convertTrad = (() => {
-        let processing = false;
-        const processed = new WeakSet();
+TongWen.keys = Object.keys(TongWen.s_2_t); if (TongWen.keys.length) { const esc = TongWen.keys.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\$&')); TongWen.charsToDetectRegex = new RegExp('(' + esc.join('|') + ')'); TongWen.replacementRegex = new RegExp(esc.join('|'), 'g'); } else { TongWen.charsToDetectRegex = null; TongWen.replacementRegex = null; }
 
-        function shouldIgnore(node) {
-            if (!node || !node.parentNode) return true;
-            const p = node.parentNode;
-            return p.nodeName === 'SCRIPT' ||
-                p.nodeName === 'STYLE' ||
-                p.nodeName === 'TEXTAREA' ||
-                p.isContentEditable ||
-                p.closest('TEXTAREA, INPUT, [contenteditable="true"], [contenteditable="plaintext-only"]');
-        }
-            
-const fn = (root = document) => {
-            if (processing || !TongWen.charsToDetectRegex) return;
-            processing = true;
-            try {
-                const doc = root.ownerDocument || root;
-                const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-                    acceptNode(node) {
-                        return shouldIgnore(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
-                    }
-                });
-                let node;
-                while ((node = walker.nextNode())) {
-                    if (!processed.has(node) && node.nodeValue && TongWen.charsToDetectRegex.test(node.nodeValue)) {
-                        node.nodeValue = node.nodeValue.replace(TongWen.replacementRegex, m => TongWen.s_2_t[m] || m);
-                        processed.add(node);
-                    }
-                }
+const convertTrad = (() => { let processing = false; const lastValues = new WeakMap();
 
-                // Shadow DOM
-                (root === doc ? doc.body : root).querySelectorAll('*').forEach(el => {
-                    if (el.shadowRoot && !el.shadowRoot.__tongwen_processed) {
-                        el.shadowRoot.__tongwen_processed = true;
-                        fn(el.shadowRoot);
-                    }
-                });
+function shouldIgnore(node) { if (!node || !node.parentNode) return true; const p = node.parentNode; if (!p) return true; const name = p.nodeName; if (name === 'SCRIPT' || name === 'STYLE' || name === 'TEXTAREA') return true; if (p.isContentEditable) return true; try { if (p.closest && p.closest('TEXTAREA, INPUT, [contenteditable="true"], [contenteditable="plaintext-only"]')) return true; } catch (e) { } return false; }
 
-    // iframe
-                if (root === doc && doc === document) {
-                    document.querySelectorAll('iframe').forEach(frame => {
-                        try {
-                            const fDoc = frame.contentDocument;
-                            if (fDoc && !fDoc.__tongwen_processed) {
-                                fDoc.__tongwen_processed = true;
-                                fn(fDoc);
-                                new MutationObserver(muts => {
-                                    for (const m of muts) {
-                                        if (m.type === 'characterData' && TongWen.charsToDetectRegex.test(m.target.nodeValue) && !shouldIgnore(m.target)) {
-                                            fn(fDoc);
-                                            break;
-                                        }
-                                        if (m.addedNodes.length) {
-                                            for (const n of m.addedNodes) {
-                                                if (nodeTreeContainsTarget(n)) {
-                                                    fn(fDoc);
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }).observe(fDoc, { subtree: true, childList: true, characterData: true });
-                            }
-                        } catch (e) { }
-                        });
-                }
-            } finally {
-                processing = false;
-            }
-        };
-        fn.isProcessing = () => processing;
-        return fn;
-    })();
+function processRoot(root = document) { if (processing || !TongWen.charsToDetectRegex) return; processing = true; try { const doc = (root && root.ownerDocument) || document; const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode(node) { return shouldIgnore(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; } }); let node; while ((node = walker.nextNode())) { const val = node.nodeValue; if (!val) continue; if (!TongWen.charsToDetectRegex.test(val)) continue; const last = lastValues.get(node); if (last === val) continue; const newVal = val.replace(TongWen.replacementRegex, m => TongWen.s_2_t[m] || m); if (newVal !== val) { node.nodeValue = newVal; lastValues.set(node, newVal); } else { lastValues.set(node, val); } }
 
-    function nodeTreeContainsTarget(node) {
-        if (!node || !TongWen.charsToDetectRegex) return false;
-        const walker = (node.ownerDocument || document).createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-            acceptNode(n) {
-                const p = n.parentNode;
-                if (p && (p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || p.nodeName === 'TEXTAREA' || p.isContentEditable)) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-                return NodeFilter.FILTER_ACCEPT;
-            }
-        });
-        let n;
-        while ((n = walker.nextNode())) {
-            if (TongWen.charsToDetectRegex.test(n.nodeValue)) return true;
-        }
-        return false;
-    }
+// Shadow DOM const container = root === doc ? doc.body : root; if (container && container.querySelectorAll) { container.querySelectorAll('*').forEach(el => { try { if (el.shadowRoot && !el.shadowRoot.__tongwen_processed) { el.shadowRoot.__tongwen_processed = true; processRoot(el.shadowRoot); } } catch (e) { } }); }
 
- function initObserver() {
-        if (!TongWen.charsToDetectRegex) return;
-        const observer = new MutationObserver(muts => {
-            if (convertTrad.isProcessing()) return;
-            for (const m of muts) {
-                if (m.type === 'characterData' && TongWen.charsToDetectRegex.test(m.target.nodeValue) && !m.target.parentNode.isContentEditable) {
-                    convertTrad(document);
-                    break;
-                }
-                if (m.addedNodes.length) {
-                    for (const n of m.addedNodes) {
-                        if (nodeTreeContainsTarget(n)) {
-                            convertTrad(document);
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-        const start = () => {
-            if (document.body) observer.observe(document.body, { subtree: true, childList: true, characterData: true });
-        };
-        if (document.body) start(); else window.addEventListener('DOMContentLoaded', start, { once: true });
- }
+// iframe if (root === doc && doc === document) { document.querySelectorAll('iframe').forEach(frame => { try { const fDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document); if (fDoc && !fDoc.__tongwen_processed) { fDoc.__tongwen_processed = true; processRoot(fDoc); const fObserver = new MutationObserver(muts => { for (const m of muts) { if (m.type === 'characterData' && m.target && TongWen.charsToDetectRegex.test(m.target.nodeValue) && !shouldIgnore(m.target)) { processRoot(fDoc); break; } if (m.addedNodes && m.addedNodes.length) { for (const n of m.addedNodes) { if (nodeTreeContainsTarget(n, fDoc)) { processRoot(fDoc); break; } } } } }); fObserver.observe(fDoc, { subtree: true, childList: true, characterData: true }); } } catch (e) { } }); } } finally { processing = false; } }
 
- function hijackHistory() {
-        const trigger = () => setTimeout(() => convertTrad(document), 0);
-        const push = history.pushState;
-        history.pushState = function () {
-            const r = push.apply(this, arguments);
-            trigger();
-            return r;
-        };
-        const replace = history.replaceState;
-        history.replaceState = function () {
-            const r = replace.apply(this, arguments);
-            trigger();
-            return r;
-        };
-        window.addEventListener('popstate', trigger);
-    }
+const fn = (root = document) => processRoot(root); fn.isProcessing = () => processing; return fn; })();
 
-    function hijackAjax() {
-        if (window.XMLHttpRequest) {
-            const open = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function () {
-                this.addEventListener('loadend', () => {
-                    if (this.readyState === 4 && (this.status === 200 || this.status === 0)) {
-                        setTimeout(() => convertTrad(document), 0);
-                    }
-                });
-                return open.apply(this, arguments);
-            };
-        }
-        if (window.fetch) {
-            const orig = window.fetch;
-            window.fetch = function () {
-                return orig.apply(this, arguments).then(res => {
-                    setTimeout(() => convertTrad(document), 0);
-                    return res;
-                });
-            };
-        }
-    }
+function nodeTreeContainsTarget(node, doc = document) { if (!node || !TongWen.charsToDetectRegex) return false; const owner = node.ownerDocument || doc; const walker = owner.createTreeWalker(node, NodeFilter.SHOW_TEXT, { acceptNode(n) { const p = n.parentNode; if (p && (p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || p.nodeName === 'TEXTAREA' || p.isContentEditable)) { return NodeFilter.FILTER_REJECT; } return NodeFilter.FILTER_ACCEPT; } }); let n; while ((n = walker.nextNode())) { if (TongWen.charsToDetectRegex.test(n.nodeValue)) return true; } return false; }
 
-    function run() {
-        if (TongWen.charsToDetectRegex) convertTrad(document);
-        initObserver();
-        hijackHistory();
-        hijackAjax();
-    }
+function initObserver() { if (!TongWen.charsToDetectRegex) return; const observer = new MutationObserver(muts => { if (convertTrad.isProcessing()) return; for (const m of muts) { if (m.type === 'characterData' && m.target && TongWen.charsToDetectRegex.test(m.target.nodeValue) && !m.target.parentNode.isContentEditable) { convertTrad(document); break; } if (m.addedNodes && m.addedNodes.length) { for (const n of m.addedNodes) { if (nodeTreeContainsTarget(n)) { convertTrad(document); break; } } } } }); const start = () => { if (document.body) observer.observe(document.body, { subtree: true, childList: true, characterData: true }); }; if (document.body) start(); else window.addEventListener('DOMContentLoaded', start, { once: true }); }
 
-    if (document.readyState === 'complete' || document.readyState === 'interactive') run();
-    else window.addEventListener('DOMContentLoaded', run, { once: true });
+function hijackHistory() { const trigger = () => setTimeout(() => convertTrad(document), 0); const push = history.pushState; history.pushState = function () { const r = push.apply(this, arguments); trigger(); return r; }; const replace = history.replaceState; history.replaceState = function () { const r = replace.apply(this, arguments); trigger(); return r; }; window.addEventListener('popstate', trigger); }
 
-    window.__zhConvert = {
-        refresh: () => convertTrad(document),
-        s_2_t_table: TongWen.s_2_t,
-        hasActiveRules: !!TongWen.charsToDetectRegex,
-        isProcessing: convertTrad.isProcessing
-    };
-})();
+function hijackAjax() { if (window.XMLHttpRequest) { const open = XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open = function () { this.addEventListener('loadend', () => { try { if (this.readyState === 4 && (this.status === 200 || this.status === 0)) { setTimeout(() => convertTrad(document), 0); } } catch (e) { } }); return open.apply(this, arguments); }; } if (window.fetch) { const orig = window.fetch; window.fetch = function () { return orig.apply(this, arguments).then(res => { setTimeout(() => convertTrad(document), 0); return res; }); }; } }
+
+function run() { if (TongWen.charsToDetectRegex) convertTrad(document); initObserver(); hijackHistory(); hijackAjax(); }
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') run(); else window.addEventListener('DOMContentLoaded', run, { once: true });
+
+window.__zhConvert = { refresh: () => convertTrad(document), s_2_t_table: TongWen.s_2_t, hasActiveRules: !!TongWen.charsToDetectRegex, isProcessing: convertTrad.isProcessing }; })();
