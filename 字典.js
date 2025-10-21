@@ -1,18 +1,17 @@
 // ==UserScript==
-// @name        簡繁即時轉換-增強版
+// @name        簡繁即時轉換-即時版
 // @namespace   iamunknown2
-// @version     3.0
-// @description 強化版動態監聽網頁變化，兼容SPA/iframe/ShadowDOM
+// @version     3.1
+// @description 即時監聽並替換文字，兼容 SPA、iframe、Shadow DOM
 // @author      YourName
-// @match       *://*/*
+// @match       ://*/
 // @grant       none
 // @run-at      document-end
 // ==/UserScript==
-
-(function() {
+(function () {
     'use strict';
-    const TongWen = {};
-    TongWen.s_2_t = {
+    const TongWen = {
+        s_2_t: {
 "\u00b7":"\u2027",
 "\u2015":"\u2500",
 "\u2016":"\u2225",
@@ -2551,342 +2550,184 @@
 "\u9f9f":"\u9f9c",
 "\ue5f1":"\u3000"
 };
-
-// 預先計算用於檢測和替換的正則表達式
-    TongWen.keys = Object.keys(TongWen.s_2_t);
-    if (TongWen.keys.length > 0) {
-        const escapedKeysForDetection = TongWen.keys.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
-        // 檢測正則：匹配任何一個定義的鍵
-        TongWen.charsToDetectRegex = new RegExp(`(${escapedKeysForDetection.join('|')})`);
-        // 替換正則：全局匹配所有定義的鍵，用於 replace 方法
-        TongWen.replacementRegex = new RegExp(escapedKeysForDetection.join('|'), 'g');
+TongWen.keys = Object.keys(TongWen.s_2_t);
+    if (TongWen.keys.length) {
+        const esc = TongWen.keys.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+        TongWen.charsToDetectRegex = new RegExp((${esc.join('|')}));
+        TongWen.replacementRegex = new RegExp(esc.join('|'), 'g');
     } else {
         TongWen.charsToDetectRegex = null;
         TongWen.replacementRegex = null;
     }
 
     const convertTrad = (() => {
-        let isProcessing = false;
-        const processedNodes = new WeakSet(); // 用於防止重複處理同一個文本節點實例
+        let processing = false;
+        const processed = new WeakSet();
 
-        // 輔助函數：判斷節點是否應被忽略（不進行文本轉換）
-        function shouldIgnoreNode(node) {
+        function shouldIgnore(node) {
             if (!node || !node.parentNode) return true;
-
-            const parent = node.parentNode;
-            const parentNodeName = parent.nodeName;
-            return parentNodeName === 'SCRIPT' ||
-                   parentNodeName === 'STYLE' ||
-                   parentNodeName === 'TEXTAREA' ||
-                   parent.isContentEditable || // 內容可編輯區域
-                   parent.closest('TEXTAREA, INPUT, [contenteditable="true"], [contenteditable="plaintext-only"]'); // 更可靠的檢查可編輯性
+            const p = node.parentNode;
+            return p.nodeName === 'SCRIPT' ||
+                p.nodeName === 'STYLE' ||
+                p.nodeName === 'TEXTAREA' ||
+                p.isContentEditable ||
+                p.closest('TEXTAREA, INPUT, [contenteditable="true"], [contenteditable="plaintext-only"]');
         }
-
-        const fn = function(rootNode = document) { // 允許傳入根節點 (document, shadowRoot, element)
-            if (isProcessing || !TongWen.charsToDetectRegex) {
-                return;
-            }
-            isProcessing = true;
-
+            
+const fn = (root = document) => {
+            if (processing || !TongWen.charsToDetectRegex) return;
+            processing = true;
             try {
-                const ownerDoc = rootNode.ownerDocument || rootNode; // For shadowRoot, ownerDocument is the main document
-
-                const walker = ownerDoc.createTreeWalker(
-                    rootNode,
-                    NodeFilter.SHOW_TEXT,
-                    {
-                        acceptNode: function(node) {
-                            if (shouldIgnoreNode(node)) {
-                                return NodeFilter.FILTER_REJECT;
-                            }
-                            // 先接受，後續在循環中用 regex 精確判斷是否包含目標字符
-                            return NodeFilter.FILTER_ACCEPT;
-                        }
-                    },
-                    false
-                );
-
+                const doc = root.ownerDocument || root;
+                const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                    acceptNode(node) {
+                        return shouldIgnore(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+                    }
+                });
                 let node;
-                const nodesToConvert = [];
                 while ((node = walker.nextNode())) {
-                    if (!processedNodes.has(node) && node.nodeValue && node.nodeValue.trim()) {
-                        // 關鍵：檢查節點文本是否真的包含我們要找的字符
-                        if (TongWen.charsToDetectRegex.test(node.nodeValue)) {
-                            nodesToConvert.push(node);
-                        }
+                    if (!processed.has(node) && node.nodeValue && TongWen.charsToDetectRegex.test(node.nodeValue)) {
+                        node.nodeValue = node.nodeValue.replace(TongWen.replacementRegex, m => TongWen.s_2_t[m] || m);
+                        processed.add(node);
                     }
                 }
 
-                for (const nNode of nodesToConvert) {
-                    if (!processedNodes.has(nNode)) { // 再次確認，以防萬一
-                        nNode.nodeValue = nNode.nodeValue.replace(
-                            TongWen.replacementRegex,
-                            match => TongWen.s_2_t[match] || match
-                        );
-                        processedNodes.add(nNode); // 標記為已處理
-                    }
-                }
-
-                // 處理 Shadow DOM (遞歸)
-                // TreeWalker 預設不進入 Shadow DOM，需要手動遍歷
-                // querySelectorAll 在 shadowRoot 上下文中也能正確工作
-                const elementsIterator = (rootNode === ownerDoc) ? ownerDoc.body.querySelectorAll('*') : rootNode.querySelectorAll('*');
-                elementsIterator.forEach(el => {
-                    if (el.shadowRoot && !el.shadowRoot.__tongwen_processed_shadow) {
-                        el.shadowRoot.__tongwen_processed_shadow = true; // 防止重複處理同一個 shadowRoot
-                        fn(el.shadowRoot); // 遞歸處理 Shadow DOM，傳入 shadowRoot 作為新的根節點
+                // Shadow DOM
+                (root === doc ? doc.body : root).querySelectorAll('*').forEach(el => {
+                    if (el.shadowRoot && !el.shadowRoot.__tongwen_processed) {
+                        el.shadowRoot.__tongwen_processed = true;
+                        fn(el.shadowRoot);
                     }
                 });
 
-                // 處理 iframe 內容 (僅當根節點是主文檔時)
-                if (rootNode === ownerDoc && ownerDoc === document) {
+    // iframe
+                if (root === doc && doc === document) {
                     document.querySelectorAll('iframe').forEach(frame => {
                         try {
-                            const frameDoc = frame.contentDocument;
-                            if (frameDoc && !frameDoc.__tongwen_converted_iframe_doc) {
-                                frameDoc.__tongwen_converted_iframe_doc = true;
-
-                                // 初始轉換 iframe 內容 (如果包含目標字符)
-                                fn(frameDoc); // 將 iframe 的 document 作為根節點
-
-                                // 為 iframe 內部文檔設置 MutationObserver
-                                const frameObserver = new MutationObserver(mutations => {
-                                    if (!TongWen.charsToDetectRegex || fn.isProcessing()) return;
-                                    let iframeNeedsConversion = false;
-                                    for (const mutation of mutations) {
-                                        if (mutation.type === 'characterData') {
-                                            const targetNode = mutation.target;
-                                            if (!shouldIgnoreNode(targetNode) && targetNode.nodeValue && TongWen.charsToDetectRegex.test(targetNode.nodeValue)) {
-                                                iframeNeedsConversion = true;
-                                                break;
-                                            }
-                                        } else if (mutation.addedNodes.length) {
-                                            for (const addedNode of mutation.addedNodes) {
-                                                if (nodeTreeContainsTargetChars(addedNode, TongWen.charsToDetectRegex, true)) {
-                                                    iframeNeedsConversion = true;
+                            const fDoc = frame.contentDocument;
+                            if (fDoc && !fDoc.__tongwen_processed) {
+                                fDoc.__tongwen_processed = true;
+                                fn(fDoc);
+                                new MutationObserver(muts => {
+                                    for (const m of muts) {
+                                        if (m.type === 'characterData' && TongWen.charsToDetectRegex.test(m.target.nodeValue) && !shouldIgnore(m.target)) {
+                                            fn(fDoc);
+                                            break;
+                                        }
+                                        if (m.addedNodes.length) {
+                                            for (const n of m.addedNodes) {
+                                                if (nodeTreeContainsTarget(n)) {
+                                                    fn(fDoc);
                                                     break;
                                                 }
                                             }
                                         }
-                                        if (iframeNeedsConversion) break;
                                     }
-                                    if (iframeNeedsConversion) {
-                                        fn(frameDoc); // 只轉換此 iframe
-                                    }
-                                });
-                                frameObserver.observe(frameDoc, {
-                                    subtree: true,
-                                    childList: true,
-                                    characterData: true
-                                });
+                                }).observe(fDoc, { subtree: true, childList: true, characterData: true });
                             }
-                        } catch (e) {
-                            // console.warn('[簡繁轉換] 無法處理 iframe:', frame, e);
-                        }
-                    });
+                        } catch (e) { }
+                        });
                 }
-
-            } catch (err) {
-                console.error('[簡繁轉換錯誤]', err);
             } finally {
-                isProcessing = false;
+                processing = false;
             }
         };
-
-        fn.isProcessing = () => isProcessing; // 暴露 isProcessing 狀態
+        fn.isProcessing = () => processing;
         return fn;
     })();
 
-    // 輔助函數：遞歸檢查節點樹是否包含目標字符 (用於 MutationObserver 優化)
-    function nodeTreeContainsTargetChars(elementNode, regex, isIframeContext = false) {
-        if (!elementNode || !regex) return false;
-
-        // 忽略的父節點標籤
-        const ignoredParentTags = ['SCRIPT', 'STYLE', 'TEXTAREA'];
-
-        // 創建一個 TreeWalker 來遍歷節點樹
-        const walkerRoot = elementNode.ownerDocument || document;
-        const walker = walkerRoot.createTreeWalker(
-            elementNode,
-            NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: function(node) {
-                    const parent = node.parentNode;
-                    if (parent) {
-                        if (ignoredParentTags.includes(parent.nodeName) || parent.isContentEditable) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-                    }
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                         if (ignoredParentTags.includes(node.nodeName) || node.isContentEditable) {
-                            return NodeFilter.FILTER_REJECT_AND_SKIP; // 跳過其子節點
-                        }
-                        if (!isIframeContext && node.nodeName === 'IFRAME') {
-                            return NodeFilter.FILTER_REJECT_AND_SKIP;
-                        }
-                        if (node.shadowRoot && !node.shadowRoot.__tongwen_recursive_check_temp) { // 避免無限遞歸檢查shadowRoot
-                            node.shadowRoot.__tongwen_recursive_check_temp = true;
-                            if (nodeTreeContainsTargetChars(node.shadowRoot, regex, isIframeContext)) {
-                                delete node.shadowRoot.__tongwen_recursive_check_temp;
-                                return NodeFilter.FILTER_ACCEPT; // 如果 shadowRoot 包含，則此元素相關
-                            }
-                            delete node.shadowRoot.__tongwen_recursive_check_temp;
-                        }
-                    }
-                    return NodeFilter.FILTER_ACCEPT;
+    function nodeTreeContainsTarget(node) {
+        if (!node || !TongWen.charsToDetectRegex) return false;
+        const walker = (node.ownerDocument || document).createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+            acceptNode(n) {
+                const p = n.parentNode;
+                if (p && (p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || p.nodeName === 'TEXTAREA' || p.isContentEditable)) {
+                    return NodeFilter.FILTER_REJECT;
                 }
-            },
-            false
-        );
-
-        let node;
-        while ((node = walker.nextNode())) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                if (node.nodeValue && regex.test(node.nodeValue)) {
-                    return true; // 找到目標字符
-                }
+                return NodeFilter.FILTER_ACCEPT;
             }
-            // Shadow DOM 的檢查已在 acceptNode 中處理
+        });
+        let n;
+        while ((n = walker.nextNode())) {
+            if (TongWen.charsToDetectRegex.test(n.nodeValue)) return true;
         }
-        return false; // 未找到
+        return false;
     }
 
-
-    const init = () => {
-        if (!TongWen.charsToDetectRegex) {
-            // console.log('[簡繁轉換] 無轉換字符定義，監聽器未激活。');
-            return;
-        }
-
-        const mainObserver = new MutationObserver(mutations => {
-            if (!TongWen.charsToDetectRegex || convertTrad.isProcessing()) {
-                return;
-            }
-
-            let needsConversion = false;
-            for (const mutation of mutations) {
-                if (mutation.type === 'characterData') {
-                    const targetNode = mutation.target;
-                    // 確保是文本節點，且父節點不是 SCRIPT/STYLE/TEXTAREA/可編輯
-                    if (targetNode.nodeType === Node.TEXT_NODE &&
-                        targetNode.nodeValue &&
-                        !(targetNode.parentNode && (targetNode.parentNode.nodeName === 'SCRIPT' || targetNode.parentNode.nodeName === 'STYLE' || targetNode.parentNode.nodeName === 'TEXTAREA' || targetNode.parentNode.isContentEditable || targetNode.parentNode.closest('TEXTAREA, INPUT, [contenteditable="true"], [contenteditable="plaintext-only"]'))) &&
-                        TongWen.charsToDetectRegex.test(targetNode.nodeValue)) {
-                        needsConversion = true;
-                        break;
-                    }
-                } else if (mutation.addedNodes.length) {
-                    for (const addedNode of mutation.addedNodes) {
-                        // 遞歸檢查新增節點（及其子樹）是否包含目標字符
-                        if (nodeTreeContainsTargetChars(addedNode, TongWen.charsToDetectRegex)) {
-                            needsConversion = true;
+ function initObserver() {
+        if (!TongWen.charsToDetectRegex) return;
+        const observer = new MutationObserver(muts => {
+            if (convertTrad.isProcessing()) return;
+            for (const m of muts) {
+                if (m.type === 'characterData' && TongWen.charsToDetectRegex.test(m.target.nodeValue) && !m.target.parentNode.isContentEditable) {
+                    convertTrad(document);
+                    break;
+                }
+                if (m.addedNodes.length) {
+                    for (const n of m.addedNodes) {
+                        if (nodeTreeContainsTarget(n)) {
+                            convertTrad(document);
                             break;
                         }
                     }
                 }
-                if (needsConversion) break;
-            }
-
-            if (needsConversion) {
-                convertTrad(document); // 對主文檔執行轉換
             }
         });
-
-        // 監聽 document.body，如果 body 還不存在，則等 DOMContentLoaded 後再監聽
-        const startObserving = () => {
-            if (document.body) {
-                 mainObserver.observe(document.body, { // 通常監聽 body 即可，documentElement 變化較少
-                    subtree: true,
-                    childList: true,
-                    characterData: true
-                });
-            } else {
-                // console.warn("[簡繁轉換] document.body 不存在，延遲監聽。");
-            }
+        const start = () => {
+            if (document.body) observer.observe(document.body, { subtree: true, childList: true, characterData: true });
         };
+        if (document.body) start(); else window.addEventListener('DOMContentLoaded', start, { once: true });
+ }
 
-        if (document.body) {
-            startObserving();
-        } else {
-            window.addEventListener('DOMContentLoaded', startObserving, {once: true});
-        }
-
-
-        const historyHandler = () => {
-            if (!TongWen.charsToDetectRegex) return;
-            // 延遲以等待SPA框架完成DOM更新
-            setTimeout(() => convertTrad(document), 350);
+ function hijackHistory() {
+        const trigger = () => setTimeout(() => convertTrad(document), 0);
+        const push = history.pushState;
+        history.pushState = function () {
+            const r = push.apply(this, arguments);
+            trigger();
+            return r;
         };
-        // 攔截 history API 調用以觸發轉換
-        const originalPushState = history.pushState;
-        history.pushState = function() {
-            const result = originalPushState.apply(this, arguments);
-            historyHandler();
-            return result;
+        const replace = history.replaceState;
+        history.replaceState = function () {
+            const r = replace.apply(this, arguments);
+            trigger();
+            return r;
         };
-        const originalReplaceState = history.replaceState;
-        history.replaceState = function() {
-            const result = originalReplaceState.apply(this, arguments);
-            historyHandler();
-            return result;
-        };
-        window.addEventListener('popstate', historyHandler); // 瀏覽器歷史導航
-
-        // 監聽 AJAX
-        if (window.XMLHttpRequest) {
-            const originalXHROpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function() {
-                this.addEventListener('loadend', function() { // loadend 更全面 (包括 error, abort)
-                    if (this.readyState === 4 && (this.status === 200 || this.status === 0) && TongWen.charsToDetectRegex) { // status 0 for local files
-                        // 響應可能不是文本，或不直接影響 DOM
-                        // 延遲執行轉換，給予 DOM 更新時間
-                        setTimeout(() => convertTrad(document), 150);
-                    }
-                });
-                return originalXHROpen.apply(this, arguments);
-            };
-        }
-        // 監聽 Fetch API (如果需要)
-        if (window.fetch) {
-            const originalFetch = window.fetch;
-            window.fetch = function() {
-                return originalFetch.apply(this, arguments).then(response => {
-                    if (TongWen.charsToDetectRegex) {
-                        // Fetch 的響應處理更複雜，因為需要複製 response 來讀取 body
-                        // 這裡僅作標記，實際 DOM 更新後 MutationObserver 應該能捕獲
-                        // 但如果想更主動，可以在 response.text() 或 .json() 之後觸發
-                        // 為簡化，依賴 MutationObserver，或可添加一個短延遲的 convertTrad
-                        setTimeout(() => convertTrad(document), 250); // 較長的延遲，因為 fetch 後的 DOM 操作可能更複雜
-                    }
-                    return response;
-                }).catch(error => {
-                    // console.warn('[簡繁轉換] Fetch error:', error);
-                    throw error;
-                });
-            };
-        }
-
-        // 定時檢查 (作為最後的補救措施，可以考慮移除或加大間隔)
-        // setInterval(() => {
-        //     if (TongWen.charsToDetectRegex && !convertTrad.isProcessing()) {
-        //         convertTrad(document);
-        //     }
-        // }, 7000);
-    };
-
-    // 初始化執行
-    const run = () => {
-        if (TongWen.charsToDetectRegex) {
-            convertTrad(document); // 初始轉換一次
-        }
-        init(); // 設置監聽器
-    };
-
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        run();
-    } else {
-        window.addEventListener('DOMContentLoaded', run, { once: true });
+        window.addEventListener('popstate', trigger);
     }
+
+    function hijackAjax() {
+        if (window.XMLHttpRequest) {
+            const open = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function () {
+                this.addEventListener('loadend', () => {
+                    if (this.readyState === 4 && (this.status === 200 || this.status === 0)) {
+                        setTimeout(() => convertTrad(document), 0);
+                    }
+                });
+                return open.apply(this, arguments);
+            };
+        }
+        if (window.fetch) {
+            const orig = window.fetch;
+            window.fetch = function () {
+                return orig.apply(this, arguments).then(res => {
+                    setTimeout(() => convertTrad(document), 0);
+                    return res;
+                });
+            };
+        }
+    }
+
+    function run() {
+        if (TongWen.charsToDetectRegex) convertTrad(document);
+        initObserver();
+        hijackHistory();
+        hijackAjax();
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') run();
+    else window.addEventListener('DOMContentLoaded', run, { once: true });
 
     window.__zhConvert = {
         refresh: () => convertTrad(document),
@@ -2894,6 +2735,4 @@
         hasActiveRules: !!TongWen.charsToDetectRegex,
         isProcessing: convertTrad.isProcessing
     };
-    // console.log('[簡繁轉換] 腳本已加載。轉換規則數量:', TongWen.keys ? TongWen.keys.length : 0);
-
 })();
