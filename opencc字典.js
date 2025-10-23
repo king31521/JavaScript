@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         繁體中文（台灣）自動轉換 (性能與動態兼容版)
-// @name:zh-TW   繁體中文（台灣）自動轉換 (性能與動態兼容版)
-// @name:zh-CN   繁体中文（台湾）自动转换 (性能与动态兼容版)
+// @name         繁體中文（台灣）自動轉換 (終極兼容版)
+// @name:zh-TW   繁體中文（台灣）自動轉換 (終極兼容版)
+// @name:zh-CN   繁体中文（台湾）自动转换 (终极兼容版)
 // @namespace    http://tampermonkey.net/
-// @version      5.1
-// @description  【終極版】兼顧極致性能與動態內容即時翻譯。為Gmail、論壇等各類網站優化，徹底解決卡頓與漏翻問題。採用Trie樹+精準監聽，字典永久快取。
+// @version      5.2
+// @description  【終極版】監聽屬性變化，完美翻譯動態顯示內容(如NGA隱藏回復)！兼顧性能與兼容性，徹底解決卡頓與漏翻。採用Trie樹+精準監聽，字典永久快取。
 // @author       YourName & Optimized by AI
 // @match        *://*/*
 // @exclude      *.gov.tw/*
@@ -27,7 +27,7 @@
     const CACHE_KEY_PREFIX = 'opencc_st_cache_';
     const TRANSLATED_MARKER = 'data-translated';
 
-    // --- 字典管理器 (與v5.0相同) ---
+    // --- 字典管理器 (與v5.1相同) ---
     const dictionaryManager = {
         async load() {
             const cached = await this._loadFromCache();
@@ -86,7 +86,7 @@
         }
     };
 
-    // --- 翻譯核心 (與v5.0相同, 使用Trie樹) ---
+    // --- 翻譯核心 (與v5.1相同, 使用Trie樹) ---
     const translator = {
         charMap: null,
         trie: null,
@@ -137,7 +137,7 @@
         }
     };
 
-    // --- DOM 處理器 (邏輯修正) ---
+    // --- DOM 處理器 (與v5.1相同) ---
     const domTranslator = {
         ignoredTags: new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE', 'INPUT']),
         translatableAttributes: new Set(['title', 'placeholder', 'alt']),
@@ -145,38 +145,51 @@
         translateNode(node) {
             if (!node || node.nodeType === Node.COMMENT_NODE) return;
 
-            // **【核心修正】** 不再檢查父級是否被翻譯，只處理傳入的節點本身。
-            // `data-translated` 標記現在在 TreeWalker 內部作為單次任務的優化，而不是作為全局守衛。
-
-            const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null, false);
-            let currentNode;
-
-            while (currentNode = walker.nextNode()) {
-                if (currentNode.nodeType === Node.ELEMENT_NODE) {
-                    const el = currentNode;
-                    // 在遍歷內部，如果遇到已標記的節點，則跳過其子樹，這是為了在單次大型翻譯任務中避免重複勞動。
-                    if (el.hasAttribute(TRANSLATED_MARKER) || this.ignoredTags.has(el.tagName) || el.isContentEditable) {
-                        let child = walker.firstChild();
-                        while (child) { child = walker.nextSibling(); }
-                        continue;
-                    }
-                    for (const attr of this.translatableAttributes) {
-                        if (el.hasAttribute(attr)) {
-                            const original = el.getAttribute(attr);
-                            const translated = translator.translate(original);
-                            if (original !== translated) el.setAttribute(attr, translated);
+            const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+                acceptNode: function(node) {
+                    // 遍歷時，如果節點本身或其父節點被忽略，則過濾掉
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const parentTag = node.parentElement?.tagName;
+                        if (parentTag && domTranslator.ignoredTags.has(parentTag)) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                    } else if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (domTranslator.ignoredTags.has(node.tagName) || node.isContentEditable) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        // 如果節點已經被標記，則跳過，這是為了避免在一次大的翻譯任務中重複工作
+                        if (node.hasAttribute(TRANSLATED_MARKER)) {
+                           return NodeFilter.FILTER_REJECT;
                         }
                     }
-                } else if (currentNode.nodeType === Node.TEXT_NODE) {
-                    const original = currentNode.nodeValue;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }, false);
+
+            const nodesToProcess = [];
+            let currentNode;
+            while(currentNode = walker.nextNode()) {
+                nodesToProcess.push(currentNode);
+            }
+
+            for (const n of nodesToProcess) {
+                if (n.nodeType === Node.ELEMENT_NODE) {
+                    for (const attr of this.translatableAttributes) {
+                        if (n.hasAttribute(attr)) {
+                            const original = n.getAttribute(attr);
+                            const translated = translator.translate(original);
+                            if (original !== translated) n.setAttribute(attr, translated);
+                        }
+                    }
+                } else if (n.nodeType === Node.TEXT_NODE) {
+                    const original = n.nodeValue;
                     if (original && original.trim().length > 0) {
                         const translated = translator.translate(original);
-                        if (original !== translated) currentNode.nodeValue = translated;
+                        if (original !== translated) n.nodeValue = translated;
                     }
                 }
             }
-
-            if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.nodeType === Node.ELEMENT_NODE && !node.hasAttribute(TRANSLATED_MARKER)) {
                 node.setAttribute(TRANSLATED_MARKER, 'true');
             }
         }
@@ -195,35 +208,45 @@
 
         console.log("繁中轉換：初次翻譯開始...");
         domTranslator.translateNode(document.body);
-        console.log("繁中轉換：初次翻譯完成，已啟動兼容動態內容的高效能監聽模式。");
+        console.log("繁中轉換：初次翻譯完成，已啟動終極兼容模式監聽。");
 
         const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                // **【邏輯修正】** 區分對待不同變動類型
-                if (mutation.type === 'childList') {
-                    // 對所有新增的節點，直接進行翻譯，解決論壇翻頁等問題
-                    for (const node of mutation.addedNodes) {
-                        domTranslator.translateNode(node);
-                    }
-                } else if (mutation.type === 'characterData') {
-                    // 對於文本變動，只翻譯變動的那個節點，極致高效
-                    const textNode = mutation.target;
-                    // 確保父元素不是被忽略的類型
-                    if (textNode && textNode.parentElement && !domTranslator.ignoredTags.has(textNode.parentElement.tagName)) {
-                        const original = textNode.nodeValue;
-                        const translated = translator.translate(original);
-                        if (original !== translated) {
-                            textNode.nodeValue = translated;
+            // 使用請求動畫幀來批量處理變化，避免單次事件循環中過度渲染
+            window.requestAnimationFrame(() => {
+                for (const mutation of mutations) {
+                    if (mutation.type === 'childList') {
+                        for (const node of mutation.addedNodes) {
+                            domTranslator.translateNode(node);
+                        }
+                    } else if (mutation.type === 'characterData') {
+                        const textNode = mutation.target;
+                        if (textNode.parentElement && !domTranslator.ignoredTags.has(textNode.parentElement.tagName)) {
+                            const original = textNode.nodeValue;
+                            const translated = translator.translate(original);
+                            if (original !== translated) {
+                                textNode.nodeValue = translated;
+                            }
+                        }
+                    } else if (mutation.type === 'attributes') {
+                        // **【核心修正】** 處理屬性變化，如 style="display: block"
+                        const targetElement = mutation.target;
+                        if (targetElement.nodeType === Node.ELEMENT_NODE) {
+                            // 移除標記，以便重新翻譯
+                            targetElement.removeAttribute(TRANSLATED_MARKER);
+                            domTranslator.translateNode(targetElement);
                         }
                     }
                 }
-            }
+            });
         });
-
+        
+        // **【核心修正】** 在觀察器配置中增加對 style 和 class 屬性的監聽
         observer.observe(document.body, {
             childList: true,
             subtree: true,
-            characterData: true
+            characterData: true,
+            attributes: true, // 啟用屬性監聽
+            attributeFilter: ['style', 'class'] // 只關心這兩個最關鍵的屬性
         });
     }
 
