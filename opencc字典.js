@@ -4,8 +4,8 @@
 // @name:zh-CN   繁体中文（台湾）自动转换
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  自動將網頁中的簡體字轉換為繁體中文（台灣正體），基於 OpenCC 的 STCharacters 和 STPhrases 字典，並能即時翻譯動態載入或變更的內容。
-// @author       ChatGPT & YourName & AI-Modified
+// @description  自動將網頁中的簡體字轉換為繁體中文（台灣正體），基於 OpenCC，並能高效、穩定地翻譯動態內容，避免干擾用戶輸入和頁面加載。
+// @author       ChatGPT & YourName
 // @match        *://*/*
 // @exclude      *.gov.tw/*
 // @exclude      *.edu.tw/*
@@ -21,14 +21,13 @@
 
     // --- 配置 ---
     const DICT_URLS = {
-        phrases: 'https://raw.githubusercontent.com/BYVoid/OpenCC/refs/heads/master/data/dictionary/STPhrases.txt',
-        chars: 'https://raw.githubusercontent.com/BYVoid/OpenCC/refs/heads/master/data/dictionary/STCharacters.txt'
+        phrases: 'https://raw.githubusercontent.com/king31521/JavaScript/refs/heads/main/STPhrases.txt',
+        chars: 'https://raw.githubusercontent.com/king31521/JavaScript/refs/heads/main/STCharacters.txt'
     };
     const CACHE_KEY_PREFIX = 'opencc_st_cache_';
     const CACHE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000; // 7天
-    const TRANSLATABLE_ATTRIBUTES = ['title', 'alt', 'placeholder'];
 
-    // --- 字典管理器 ---
+    // --- 字典管理器 (此部分邏輯健全，無需修改) ---
     const dictionaryManager = {
         phraseMap: new Map(),
         charMap: new Map(),
@@ -43,25 +42,26 @@
             }
 
             console.log('繁中轉換：正在從網路獲取字典...');
-            const [phrasesText, charsText] = await this._fetchDictionaries();
-
-            this._parseDict(phrasesText, this.phraseMap, false);
-            this._parseDict(charsText, this.charMap, true); // true 表示這是單字字典，要處理重複鍵
-
-            await this._saveToCache();
-            console.log('繁中轉換：字典獲取並快取成功。');
+            try {
+                const [phrasesText, charsText] = await this._fetchDictionaries();
+                this._parseDict(phrasesText, this.phraseMap, false);
+                this._parseDict(charsText, this.charMap, true);
+                await this._saveToCache();
+                console.log('繁中轉換：字典獲取並快取成功。');
+            } catch (error) {
+                console.error('繁中轉換：獲取字典失敗，腳本可能無法正常工作。', error);
+                throw error;
+            }
         },
 
         _parseDict(text, map, isCharDict) {
+            if (!text) return;
             text.split('\n').forEach(line => {
                 if (!line.trim()) return;
                 const parts = line.split('\t');
                 if (parts.length < 2) return;
-
                 const [key, value] = parts;
-                const firstValue = value.split(' ')[0]; // 取第一個候選詞
-
-                // 對於單字字典，如果鍵已存在，則不覆蓋（實現「取第一個」的邏輯）
+                const firstValue = value.split(' ')[0];
                 if (isCharDict && map.has(key)) {
                     return;
                 }
@@ -74,11 +74,16 @@
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: url,
-                    onload: response => resolve(response.responseText),
+                    onload: response => {
+                        if (response.status >= 200 && response.status < 300) {
+                            resolve(response.responseText);
+                        } else {
+                            reject(new Error(`Failed to fetch ${url}, status: ${response.status}`));
+                        }
+                    },
                     onerror: error => reject(error)
                 });
             });
-
             return Promise.all([
                 fetchPromise(DICT_URLS.phrases),
                 fetchPromise(DICT_URLS.chars)
@@ -97,13 +102,11 @@
         async _loadFromCache() {
             const cachedJson = await GM_getValue(CACHE_KEY_PREFIX + 'data', null);
             if (!cachedJson) return null;
-
             const cachedData = JSON.parse(cachedJson);
             if (Date.now() - cachedData.timestamp > CACHE_EXPIRATION_MS) {
                 console.log('繁中轉換：字典快取已過期。');
                 return null;
             }
-
             return {
                 phraseMap: new Map(cachedData.phrases),
                 charMap: new Map(cachedData.chars)
@@ -111,7 +114,7 @@
         }
     };
 
-    // --- 翻譯核心 ---
+    // --- 翻譯核心 (此部分邏輯健全，無需修改) ---
     const translator = {
         phraseMap: null,
         charMap: null,
@@ -120,99 +123,93 @@
         init(phraseMap, charMap) {
             this.phraseMap = phraseMap;
             this.charMap = charMap;
-            // 將詞彙按長度降序排序，確保最大正向匹配
             this.sortedPhraseKeys = [...this.phraseMap.keys()].sort((a, b) => b.length - a.length);
         },
 
         translate(text) {
-            if (!this.phraseMap || !this.charMap) return text;
-            if (!text || typeof text !== 'string') return text;
-            // 簡單檢查，如果沒有簡體字特徵，可能就不需要翻譯，提升效率
-            // 此處為可選優化，暫時保持原樣以確保完整性
-
+            if (!this.phraseMap || !this.charMap || !text || typeof text !== 'string') {
+                return text;
+            }
             let result = '';
             let i = 0;
             const len = text.length;
-
             while (i < len) {
-                let found = false;
-                // 1. 嘗試匹配最長的詞彙
+                let found_phrase = false;
                 for (const key of this.sortedPhraseKeys) {
-                    if (i + key.length <= len && text.substring(i, i + key.length) === key) {
+                    if (text.substring(i, i + key.length) === key) {
                         result += this.phraseMap.get(key);
                         i += key.length;
-                        found = true;
+                        found_phrase = true;
                         break;
                     }
                 }
+                if (found_phrase) continue;
 
-                if (found) continue;
-
-                // 2. 如果沒有詞彙匹配，嘗試匹配單字
                 const char = text[i];
-                if (this.charMap.has(char)) {
-                    result += this.charMap.get(char);
-                } else {
-                    // 3. 如果都沒有，保留原字
-                    result += char;
-                }
+                result += this.charMap.get(char) || char;
                 i++;
             }
             return result;
         }
     };
 
-    // --- DOM 處理器 ---
+    // --- DOM 處理器 (已重構) ---
     const domTranslator = {
-        ignoredTags: new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE']),
+        ignoredTags: new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE', 'INPUT']),
+        translatableAttributes: new Set(['title', 'placeholder', 'alt']),
 
         translateNode(node) {
-            if (!node || node.nodeType === Node.COMMENT_NODE) return;
+            if (!node) return;
 
-            // 檢查是否已翻譯或在忽略列表中
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                if (node.dataset.translated === 'true' || this.ignoredTags.has(node.tagName.toUpperCase()) || node.isContentEditable) {
-                    return;
-                }
-                // 【新增】翻譯元素的屬性
-                for (const attr of TRANSLATABLE_ATTRIBUTES) {
-                    if (node.hasAttribute(attr)) {
-                        const originalValue = node.getAttribute(attr);
-                        if (originalValue) {
+            // 遍歷節點樹
+            const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null, false);
+
+            let currentNode;
+            while (currentNode = walker.nextNode()) {
+                if (currentNode.nodeType === Node.ELEMENT_NODE) {
+                    // 檢查是否應忽略此元素及其子元素
+                    if (this.ignoredTags.has(currentNode.tagName) || currentNode.isContentEditable) {
+                        // 跳過此節點的所有子節點
+                        let child = walker.firstChild();
+                        while (child) {
+                            child = walker.nextSibling();
+                        }
+                        continue;
+                    }
+                    // 翻譯元素的屬性
+                    for (const attr of this.translatableAttributes) {
+                        if (currentNode.hasAttribute(attr)) {
+                            const originalValue = currentNode.getAttribute(attr);
                             const translatedValue = translator.translate(originalValue);
                             if (originalValue !== translatedValue) {
-                                node.setAttribute(attr, translatedValue);
+                                currentNode.setAttribute(attr, translatedValue);
                             }
                         }
                     }
-                }
-            }
-
-            // 遍歷子節點
-            const childNodes = Array.from(node.childNodes);
-            for (const child of childNodes) {
-                if (child.nodeType === Node.TEXT_NODE) {
-                    const originalText = child.nodeValue;
+                } else if (currentNode.nodeType === Node.TEXT_NODE) {
+                    // 翻譯文本節點
+                    const originalText = currentNode.nodeValue;
                     if (originalText && originalText.trim().length > 0) {
                         const translatedText = translator.translate(originalText);
                         if (originalText !== translatedText) {
-                           child.nodeValue = translatedText;
+                            currentNode.nodeValue = translatedText;
                         }
                     }
-                } else if (child.nodeType === Node.ELEMENT_NODE) {
-                    // 遞迴處理子元素
-                    this.translateNode(child);
                 }
-            }
-
-            // 標記已翻譯的元素
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                node.dataset.translated = 'true';
             }
         }
     };
 
-    // --- 主執行流程 ---
+    // --- Debounce 防抖函數 ---
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    // --- 主執行流程 (已重構) ---
     async function main() {
         try {
             await dictionaryManager.load();
@@ -222,62 +219,59 @@
             domTranslator.translateNode(document.body);
             console.log("繁中轉換：初次翻譯完成。");
 
-            // --- 【修改】設置 MutationObserver 來監聽動態內容（包括內容變更） ---
-            const observerOptions = {
-                childList: true,      // 監聽子節點的新增或刪除
-                subtree: true,        // 監聽所有後代節點
-                characterData: true,  // 【新增】監聽文字節點內容的變更
-                attributes: true,     // 【新增】監聽屬性的變更
-                attributeFilter: TRANSLATABLE_ATTRIBUTES // 【新增】只關心需要翻譯的屬性
-            };
+            // 待處理節點的集合
+            const nodesToProcess = new Set();
+
+            // 創建一個 Debounced 翻譯函數
+            const debouncedTranslate = debounce(() => {
+                // 複製集合內容並清空原集合，避免在處理時又被修改
+                const nodes = [...nodesToProcess];
+                nodesToProcess.clear();
+                
+                // console.log(`繁中轉換：處理 ${nodes.length} 個變更節點...`);
+                for (const node of nodes) {
+                    // 確保節點仍然在文檔中
+                    if (document.body.contains(node)) {
+                        domTranslator.translateNode(node);
+                    }
+                }
+            }, 500); // 500ms 的延遲，可以根據需要調整
 
             const observer = new MutationObserver(mutations => {
-                // 在處理變動前，先斷開觀察，防止因自身修改觸發無限循環
-                observer.disconnect();
-
                 for (const mutation of mutations) {
-                    switch (mutation.type) {
-                        case 'childList':
-                            // 處理新增的節點
-                            for (const node of mutation.addedNodes) {
-                                domTranslator.translateNode(node);
+                    // 處理新增的節點
+                    if (mutation.type === 'childList') {
+                        for (const node of mutation.addedNodes) {
+                            // 只添加元素節點或有內容的文本節點的父節點
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                nodesToProcess.add(node);
+                            } else if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim()) {
+                                nodesToProcess.add(node.parentElement);
                             }
-                            break;
-                        case 'characterData':
-                            // 處理文字內容的變更
-                            const textNode = mutation.target;
-                            const originalText = textNode.nodeValue;
-                            if (originalText && originalText.trim().length > 0) {
-                                const translatedText = translator.translate(originalText);
-                                if (originalText !== translatedText) {
-                                    textNode.nodeValue = translatedText;
-                                }
-                            }
-                            break;
-                        case 'attributes':
-                            // 處理屬性值的變更
-                            const element = mutation.target;
-                            const attrName = mutation.attributeName;
-                            if (element.hasAttribute(attrName)) {
-                                const originalValue = element.getAttribute(attrName);
-                                if (originalValue) {
-                                    const translatedValue = translator.translate(originalValue);
-                                    if (originalValue !== translatedValue) {
-                                        element.setAttribute(attrName, translatedValue);
-                                    }
-                                }
-                            }
-                            break;
+                        }
+                    }
+                    // 處理文本內容的變化
+                    else if (mutation.type === 'characterData') {
+                        // characterData 的 target 是文本節點本身，所以我們要處理其父元素
+                        if (mutation.target.parentElement) {
+                            nodesToProcess.add(mutation.target.parentElement);
+                        }
                     }
                 }
 
-                // 處理完畢後，重新連接觀察器
-                observer.observe(document.body, observerOptions);
+                // 如果有待處理的節點，觸發 debounced 函數
+                if (nodesToProcess.size > 0) {
+                    debouncedTranslate();
+                }
             });
 
-            // 使用新的選項啟動觀察器
-            observer.observe(document.body, observerOptions);
-            console.log("繁中轉換：已啟動全方位即時翻譯監聽。");
+            observer.observe(document.body, {
+                childList: true,      // 監聽子節點的增刪
+                subtree: true,          // 監聽所有後代節點
+                characterData: true   // 監聽文本內容的變化
+            });
+
+            console.log("繁中轉換：已啟動高效能即時翻譯監聽。");
 
         } catch (error) {
             console.error("繁中轉換腳本出錯:", error);
