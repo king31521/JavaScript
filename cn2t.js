@@ -307,3 +307,78 @@
         }
     }
 })();
+
+// 初始化脚本
+(function() {
+    // 创建转换器实例
+    const converter = OpenCC.Converter({ from: 's', to: 't' });
+    
+    // 初始翻译页面
+    setTimeout(() => {
+        convertPage(converter);
+    }, 100);
+    
+    // 监控页面变化
+    const observer = new MutationObserver((mutations) => {
+        let shouldConvert = false;
+        
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                for (let node of mutation.addedNodes) {
+                    if (node.nodeType === Node.TEXT_NODE || 
+                        (node.nodeType === Node.ELEMENT_NODE && node.textContent)) {
+                        shouldConvert = true;
+                        break;
+                    }
+                }
+            }
+        });
+        
+        if (shouldConvert) {
+            convertPage(converter);
+        }
+    });
+    
+    // 开始观察
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+    });
+    
+    // 页面转换函数
+    function convertPage(converter) {
+        const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        const textNodes = [];
+        let node;
+        
+        while (node = walker.nextNode()) {
+            // 跳过script和style标签内的文本
+            if (node.parentElement && 
+                (node.parentElement.tagName === 'SCRIPT' || 
+                 node.parentElement.tagName === 'STYLE')) {
+                continue;
+            }
+            textNodes.push(node);
+        }
+        
+        textNodes.forEach(textNode => {
+            if (textNode.textContent.trim()) {
+                try {
+                    const converted = converter(textNode.textContent);
+                    if (converted !== textNode.textContent) {
+                        textNode.textContent = converted;
+                    }
+                } catch (e) {
+                    console.warn('转换失败:', e);
+                }
+            }
+        });
+    }
+})();
