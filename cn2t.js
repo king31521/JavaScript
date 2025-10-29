@@ -17,7 +17,7 @@
       typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
       typeof define === 'function' && define.amd ? define(['exports'], factory) :
       (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.OpenCC = {}));
-    })(this, (function (exports) { 'use strict';
+    })(typeof window !== 'undefined' ? window : this, (function (exports) { 'use strict';
 
       class Trie {
         constructor() {
