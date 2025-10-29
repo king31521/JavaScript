@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         自動簡轉繁
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  自動將網頁簡體字轉換為繁體字，並監控頁面變化即時翻譯，例如NGA論壇的隱藏留言
 // @author       You & ChatGPT
 // @match        *://*/*
 // @grant        none
-// @run-at       document-idle
+// @run-at       document-end
 // ==/UserScript==
 
 (function() {
