@@ -188,7 +188,7 @@
               }
             }
           }
-          inner(rootNode, false);
+          inner(rootNode, true);
         }
 
         function restore() {
