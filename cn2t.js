@@ -17,7 +17,7 @@
       typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
       typeof define === 'function' && define.amd ? define(['exports'], factory) :
       (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.OpenCC = {}));
-    })(typeof window !== 'undefined' ? window : this, (function (exports) { 'use strict';
+    })(typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : this), (function (exports) { 'use strict';
 
       class Trie {
         constructor() {
@@ -359,3 +359,5 @@ initialConvert();
 // -------------------- 替換部分到此結束 --------------------
 
 })();
+
+// 確保在 userscript / sandbox 環境下仍能取得全域 OpenCC (function () { try { var g = typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : this); if (g && g.OpenCC && typeof window !== 'undefined' && typeof window.OpenCC === 'undefined') { window.OpenCC = g.OpenCC; } if (typeof unsafeWindow !== 'undefined' && typeof unsafeWindow.OpenCC === 'undefined' && typeof window !== 'undefined' && window.OpenCC) { try { unsafeWindow.OpenCC = window.OpenCC; } catch (e) { /* ignore / } } } catch (e) { / ignore */ } }());
