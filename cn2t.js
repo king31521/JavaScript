@@ -262,78 +262,100 @@
 
     }));
 
-    // ====== BUG修復：以下是新增的執行腳本邏輯 ======
+// -------------------- 請將以下程式碼貼到你的腳本中 --------------------
 
-    // 1. 建立簡轉繁轉換器 (s2t: simplified to traditional)
-    // 這裡我們使用預設最高級的 'cn' -> 'twp' (簡體到台灣正體，含詞彙轉換)
-    const converter = OpenCC.Converter({ from: 'cn', to: 'twp' });
+// 建立一個從簡體（cn）轉換到台灣繁體（twp，包含常用詞彙）的轉換器
+const converter = OpenCC.Converter({ from: 'cn', to: 'twp' });
 
-    // 2. 核心轉換函式，處理單個DOM節點
-    function translateNode(node) {
-        // 忽略的標籤，避免破壞頁面功能
-        const ignoreTags = ['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE'];
-        if (node.tagName && ignoreTags.includes(node.tagName.toUpperCase())) {
+// 節點遍歷與轉換的核心函數
+function traverseAndConvert(rootNode) {
+    // 需要忽略轉換的 HTML 標籤
+    const ignoreTags = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE', 'svg']);
+    // 需要忽略轉換的 CSS class (常用於程式碼編輯器或特殊區塊)
+    const ignoreClasses = new Set(['ignore-opencc', 'CodeMirror', 'monaco-editor', 'ace_editor']);
+
+    // 處理元素節點
+    if (rootNode.nodeType === Node.ELEMENT_NODE) {
+        // 如果是需要忽略的標籤、包含忽略的 class、或是可編輯的元素，則直接返回，不再處理其子節點
+        if (ignoreTags.has(rootNode.tagName) || rootNode.isContentEditable) {
             return;
         }
-
-        // 忽略已有 'translated' 標記的節點，防止重複轉換
-        if (node.isTranslated) {
-            return;
-        }
-        node.isTranslated = true;
-
-        // 使用 TreeWalker 來遍歷所有文字節點
-        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
-        let textNode;
-        while (textNode = walker.nextNode()) {
-            if (textNode.nodeValue) {
-                textNode.nodeValue = converter(textNode.nodeValue);
+        for (const cls of ignoreClasses) {
+            if (rootNode.classList.contains(cls)) {
+                return;
             }
         }
+        // 轉換元素的常用屬性
+        const attributesToConvert = ['title', 'alt', 'placeholder', 'aria-label'];
+        for (const attr of attributesToConvert) {
+            if (rootNode.hasAttribute(attr)) {
+                rootNode.setAttribute(attr, converter(rootNode.getAttribute(attr)));
+            }
+        }
+    }
 
-        // 轉換常用屬性，如 tooltip
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            const attributesToTranslate = ['title', 'placeholder', 'alt'];
-            attributesToTranslate.forEach(attr => {
-                if (node.hasAttribute(attr)) {
-                    const originalValue = node.getAttribute(attr);
-                    if (originalValue) {
-                        node.setAttribute(attr, converter(originalValue));
-                    }
-                }
+    // 遍歷子節點
+    for (const child of rootNode.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+            // 轉換文本節點
+            if (child.nodeValue && child.nodeValue.trim().length > 0) {
+                child.nodeValue = converter(child.nodeValue);
+            }
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+            // 遞歸處理子元素節點
+            traverseAndConvert(child);
+        }
+    }
+}
+
+// 處理 DOM 變化的回呼函數
+function handleMutations(mutations) {
+    // 在處理 DOM 變化前，先暫停觀察，以防止因修改 DOM 而觸發的無限循環
+    observer.disconnect();
+
+    for (const mutation of mutations) {
+        // 只處理新增的節點
+        if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach(node => {
+                traverseAndConvert(node);
             });
         }
     }
 
-    // 3. 建立 MutationObserver 來監控頁面的動態變化
-    const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-            mutation.addedNodes.forEach(node => {
-                // 只處理元素節點和文字節點
-                if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
-                    translateNode(node);
-                }
-            });
-        });
+    // 處理完畢後，重新啟動觀察
+    startObserver();
+}
+
+// 建立並配置 MutationObserver
+const observer = new MutationObserver(handleMutations);
+
+// 啟動觀察的函數
+function startObserver() {
+    observer.observe(document.body, {
+        childList: true, // 監聽子節點的增加或刪除
+        subtree: true,   // 監聽所有後代節點
     });
+}
 
-    // 4. 在 DOM 載入完成後執行首次全頁轉換，並啟動監聽
-    document.addEventListener('DOMContentLoaded', () => {
-        // 先轉換一次目前已有的內容
-        if (document.body) {
-            translateNode(document.body);
-        }
+// 頁面載入後的初始轉換函數
+function initialConvert() {
+    // 確保 document.body 已存在
+    if (!document.body) {
+        window.addEventListener('DOMContentLoaded', initialConvert, { once: true });
+        return;
+    }
 
-        // 轉換網頁標題
-        document.title = converter(document.title);
+    // 轉換頁面標題和主體內容
+    document.title = converter(document.title);
+    traverseAndConvert(document.body);
 
-        // 開始監控 body 的子節點變化
-        if (document.body) {
-            observer.observe(document.body, {
-                childList: true, // 監控子節點的新增和刪除
-                subtree: true    // 監控所有後代節點
-            });
-        }
-    });
+    // 啟動觀察，以處理後續的動態內容
+    startObserver();
+}
+
+// 執行初始轉換
+initialConvert();
+
+// -------------------- 替換部分到此結束 --------------------
 
 })();
