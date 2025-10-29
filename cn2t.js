@@ -6,7 +6,7 @@
 // @author       You & ChatGPT
 // @match        *://*/*
 // @grant        none
-// @run-at       document-start
+// @run-at       document-idle
 // ==/UserScript==
 
 (function() {
