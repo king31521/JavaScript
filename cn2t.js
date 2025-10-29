@@ -64,7 +64,7 @@
         convert(s) {
           const t = this.map;
           const n = s.length, arr = [];
-          let orig_i;
+          let orig_i = null;
           for (let i = 0; i < n;) {
             let t_curr = t, k = 0, v;
             for (let j = i; j < n;) {
