@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         網頁簡轉繁 (OpenCC) - 最終合併版 v2.0
+// @name         網頁簡轉繁 (OpenCC) - 最終合併版 v2.1 (NPM字典源)
 // @namespace    https://github.com/seyhn/opencc-web-extension
-// @version      2.0
-// @description  基於 OpenCC 實現的網頁繁簡轉換，自動處理動態載入內容。修復了原版字典 404 問題，並增加 CDN 備援與快取機制。
+// @version      2.1
+// @description  基於 OpenCC 實現的網頁繁簡轉換，自動處理動態載入內容。已將字典來源切換至 JSDelivr NPM。
 // @author       AI-Enhanced & Community
 // @match        http://*/*
 // @match        https://*/*
@@ -10,12 +10,10 @@
 // @exclude      /^https?:\/\/docs.google\.com\/.*?/
 // @exclude      /^https?:\/\/drive.google\.com\/.*?/
 // @exclude      /^https?:\/\/github\.com\/.*?/
-// @exclude      /^https://vscode.dev/.*?/
+// @exclude      /^https:\/\/vscode.dev/.*?/
 // @exclude      /^https?:\/\/codepen\.io\/.*?/
 // @connect      cdn.jsdelivr.net
 // @connect      fastly.jsdelivr.net
-// @connect      cdn.statically.io
-// @connect      raw.githubusercontent.com
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
@@ -28,12 +26,10 @@
 
     // --- 配置區 ---
     const CONFIG = {
-        // 字典檔案的 CDN 來源，會依序嘗試
+        // 字典檔案的 CDN 來源，指向 JSDelivr 上的 NPM 套件 'opencc'
         dictBaseUrls: [
-            'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@v1.1.7/data/dictionary/',
-            'https://fastly.jsdelivr.net/gh/BYVoid/OpenCC@v1.1.7/data/dictionary/',
-            'https://cdn.statically.io/gh/BYVoid/OpenCC/v1.1.7/data/dictionary/',
-            'https://raw.githubusercontent.com/BYVoid/OpenCC/v1.1.7/data/dictionary/', // 最終備援
+            'https://www.jsdelivr.com/package/npm/opencc?tab=files&path=data%2Fdictionary/',
+            'https://fastly.jsdelivr.net/npm/opencc?tab=files&path=data%2Fdictionary/', // JSDelivr 備援
         ],
         // 可用的轉換模式及其所需的字典
         conversionChains: {
@@ -252,22 +248,24 @@
         const enabledText = () => state.userConfig.enabled ? '✅ 停用自動轉換' : '☑️ 啟用自動轉換';
         const currentModeText = () => `🔄 切換模式 (當前: ${CONFIG.conversionChains[state.userConfig.conversion].name})`;
 
-        // 刷新選單的函數
-        const refreshMenu = () => {
-            GM_registerMenuCommand(enabledText(), toggleEnable);
-            GM_registerMenuCommand('手动執行一次轉換', () => { if (state.converter) convertPage(); });
-            GM_registerMenuCommand(currentModeText(), switchConversion);
-        }
-        
+        // 使用陣列來管理選單 ID，方便統一更新
         let menuIds = [];
-        // 重新註冊所有選單
+
+        // 重新註冊所有選單的函數
         const updateMenu = () => {
-            menuIds.forEach(id => GM_unregisterMenuCommand(id));
+            // 先移除舊的選單命令
+            menuIds.forEach(id => {
+                if(typeof GM_unregisterMenuCommand === 'function') {
+                    GM_unregisterMenuCommand(id);
+                }
+            });
             menuIds = [];
+
+            // 重新註冊選單
             menuIds.push(GM_registerMenuCommand(enabledText(), toggleEnable, 'E'));
             menuIds.push(GM_registerMenuCommand('手动執行一次轉換', () => { if (state.converter) convertPage(); }, 'M'));
             menuIds.push(GM_registerMenuCommand(currentModeText(), switchConversion,'S'));
-        }
+        };
 
         const toggleEnable = async () => {
             state.userConfig.enabled = !state.userConfig.enabled;
@@ -288,7 +286,7 @@
 
         updateMenu();
     }
-    
+
     // --- 腳本主入口 ---
     (async function main() {
         await loadConfig();
