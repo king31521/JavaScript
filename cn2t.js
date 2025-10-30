@@ -1,23 +1,17 @@
 /**
- * OpenCC-JS 修正版：加強字典來源與載入偵錯，確保 TWVariants 可載入
+ * OpenCC-JS 修正版：容錯性的字典解析（支援任意空白分隔）並保持 TWVariants 最終逐字覆蓋
  *
- * @version 1.2.5 (強化字典來源與載入偵錯)
+ * @version 1.2.6 (改良字典解析)
  * @license Apache-2.0
  */
 var OpenCC = (function() {
   'use strict';
 
-  // 更可靠的字典來源清單（按嘗試順序）
   const DICT_SOURCES = [
-    // GitHub raw by tag/branch — 正確格式： user/repo/branch/path/
     'https://raw.githubusercontent.com/BYVoid/OpenCC/ver.1.1.7/data/dictionary/',
-    // jsDelivr (raw via npm/github)
     'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@ver.1.1.7/data/dictionary/',
-    // fastly jsdelivr fallback
     'https://fastly.jsdelivr.net/gh/BYVoid/OpenCC@ver.1.1.7/data/dictionary/',
-    // unpkg (npm package)
     'https://unpkg.com/opencc-data@1.0.5/data/dictionary/',
-    // 公共備援（最後手段）
     'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@master/data/dictionary/'
   ];
 
@@ -46,9 +40,7 @@ var OpenCC = (function() {
       let lastMatch = null;
       while (j < text.length && node[text[j]]) {
         node = node[text[j]];
-        if (node.wordEnd) {
-          lastMatch = { end: j, value: node.value };
-        }
+        if (node.wordEnd) lastMatch = { end: j, value: node.value };
         j++;
       }
       if (lastMatch) {
@@ -67,23 +59,15 @@ var OpenCC = (function() {
     for (const baseUrl of baseSources) {
       const url = `${baseUrl}${dictName}.txt`;
       try {
-        console.log(`[fetch] Attempting ${url}`);
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Accept': 'text/plain, */*' },
-          mode: 'cors'
-        });
-
+        console.log(`[fetch] Trying ${url}`);
+        const response = await fetch(url, { method: 'GET', headers: { 'Accept': 'text/plain, */*' }, mode: 'cors' });
         if (!response.ok) {
-          const statusText = `HTTP ${response.status}: ${response.statusText}`;
-          console.warn(`[fetch] ${url} returned ${statusText}`);
-          lastError = new Error(statusText);
+          console.warn(`[fetch] ${url} returned HTTP ${response.status}`);
+          lastError = new Error(`HTTP ${response.status}`);
           continue;
         }
-
-        const contentLength = response.headers.get('content-length');
         const text = await response.text();
-        console.log(`[fetch] Success ${url} (bytes: ${contentLength || text.length})`);
+        console.log(`[fetch] Success ${url} (chars: ${text.length})`);
         return text;
       } catch (err) {
         console.warn(`[fetch] Error fetching ${url}: ${err && err.message}`);
@@ -97,34 +81,53 @@ var OpenCC = (function() {
   async function fetchAndParseDict(dictName, customBaseUrl = null) {
     const sources = customBaseUrl ? [customBaseUrl] : DICT_SOURCES;
     const cacheKey = `${sources.join(',')}:${dictName}`;
-
-    if (dictionaryCache.has(cacheKey)) {
-      return await dictionaryCache.get(cacheKey);
-    }
+    if (dictionaryCache.has(cacheKey)) return await dictionaryCache.get(cacheKey);
 
     const fetchPromise = (async () => {
       try {
         const text = await fetchWithFallback(dictName, sources);
-        const lines = text.split('\n');
+        const lines = text.split(/\r?\n/);
         const dictData = [];
 
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine || trimmedLine.startsWith('#')) continue;
-          const tabIndex = trimmedLine.indexOf('\t');
-          if (tabIndex > 0) {
-            const key = trimmedLine.substring(0, tabIndex);
-            const valuesPart = trimmedLine.substring(tabIndex + 1);
-            const value = valuesPart.split(' ')[0];
-            if (key && value) dictData.push([key, value]);
+        for (let idx = 0; idx < lines.length; idx++) {
+          const raw = lines[idx];
+          if (!raw) continue;
+          const trimmedLine = raw.trim();
+          if (trimmedLine === '' || trimmedLine.startsWith('#')) continue;
+
+          // 支援任意空白（tab 或空格）作為 key/value 的分隔
+          // 找到第一個連續空白區段的位置
+          const m = trimmedLine.match(/(\S+)\s+(.+)/);
+          if (m) {
+            const key = m[1];
+            const valuesPart = m[2].trim();
+            // value 取第一個非空項目（以空白分隔）
+            const value = valuesPart.split(/\s+/)[0];
+            if (key && value) {
+              dictData.push([key, value]);
+            }
+          } else {
+            // 若沒有 match，記錄 debug（但不中斷）
+            // 某些檔案可能有以逗號或其他分隔，此時僅 log 出來方便排查
+            // 但不自動嘗試複雜解析以避免誤判
+            // 只在很少量的行出現才會被忽略
+            // 若需要更寬鬆解析，可改為更複雜的分隔策略
+            // eslint-disable-next-line no-console
+            console.debug(`[parse] Unrecognized line format in ${dictName} at line ${idx + 1}: "${raw}"`);
           }
         }
 
         console.log(`[parse] ${dictName} parsed ${dictData.length} entries`);
-        if (dictData.length > 0) console.log(`[parse] ${dictName} sample:`, dictData.slice(0, 3));
+        if (dictData.length === 0) {
+          // 顯示前幾行原始內容以利除錯
+          console.warn(`[parse] ${dictName} parsed 0 entries. First 8 raw lines:`, lines.slice(0, 8));
+        } else {
+          console.log(`[parse] ${dictName} sample:`, dictData.slice(0, 5));
+        }
+
         return dictData;
       } catch (error) {
-        console.error(`[parse] Failed to load/parse ${dictName}: ${error && error.message}`);
+        console.error(`[parse] Failed to fetch/parse ${dictName}: ${error && error.message}`);
         dictionaryCache.delete(cacheKey);
         throw error;
       }
@@ -141,10 +144,11 @@ var OpenCC = (function() {
       for (const [k, v] of dictData) {
         if (k && v && k !== v) { trie.insert(k, v); inserted++; }
       }
-      console.log(`[factory] Trie build ${dictNames[idx]} inserted ${inserted}`);
+      console.log(`[factory] Trie ${dictNames[idx]} inserted ${inserted}`);
       return trie;
     });
 
+    // 建立逐字映射（若字典看起來是逐字類型）
     const perCharMaps = [];
     for (let i = 0; i < dictNames.length; i++) {
       const name = dictNames[i];
@@ -172,6 +176,7 @@ var OpenCC = (function() {
         if (result !== prev) console.log(`[convert] After ${dictNames[i]}: "${prev}" -> "${result}"`);
       }
 
+      // 合併 per-char maps（後者覆蓋前者）
       const finalMap = Object.create(null);
       for (const entry of perCharMaps) {
         if (entry.map) {
@@ -218,22 +223,21 @@ var OpenCC = (function() {
         }
 
         const dictNames = conversionChains[chainKey];
-        if (!dictNames) throw new Error(`Unknown chain ${chainKey}`);
+        if (!dictNames) throw new Error(`Conversion chain not found: ${chainKey}`);
 
-        console.log(`[create] Loading chain ${chainKey}:`, dictNames);
+        console.log(`[create] Creating converter for ${chainKey}:`, dictNames);
 
-        const dictionaries = await Promise.all(
-          dictNames.map(name => fetchAndParseDict(name, baseUrl))
-        );
+        const dictionaries = await Promise.all(dictNames.map(name => fetchAndParseDict(name, baseUrl)));
 
-        console.log(`[create] Loaded ${dictionaries.length} dictionaries for ${chainKey}`);
+        console.log(`[create] Loaded dictionaries count: ${dictionaries.length}`);
 
-        // 檢查 TWVariants 是否存在並輸出樣本
+        // 顯示 TWVariants 狀態（若在 chain 裡）
         const twIdx = dictNames.indexOf('TWVariants');
         if (twIdx >= 0) {
           const tw = dictionaries[twIdx];
-          console.log(`[create] TWVariants entries: ${tw.length}`);
-          if (tw.length > 0) console.log('[create] TWVariants sample:', tw.slice(0, 5));
+          console.log(`[create] TWVariants parsed entries: ${tw.length}`);
+          if (tw.length > 0) console.log('[create] TWVariants sample:', tw.slice(0, 8));
+          else console.warn('[create] TWVariants parsed 0 entries — 檔案存在但解析失敗或格式不同');
         }
 
         return ConverterFactory(dictionaries, dictNames, chainKey);
@@ -253,16 +257,11 @@ var OpenCC = (function() {
     },
 
     async testConversion(text, chainKey = 's2tw') {
-      try {
-        console.log(`[test] chain ${chainKey} input: "${text}"`);
-        const converter = await this.createConverter(chainKey);
-        const out = converter(text);
-        console.log(`[test] result: "${out}"`);
-        return out;
-      } catch (err) {
-        console.error('[test] failed:', err && err.message);
-        throw err;
-      }
+      console.log(`[test] Running testConversion for ${chainKey} with input: "${text}"`);
+      const converter = await this.createConverter(chainKey);
+      const out = converter(text);
+      console.log(`[test] result: "${out}"`);
+      return out;
     }
   };
 })();
