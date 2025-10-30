@@ -8,13 +8,10 @@
  * This version is patched to fix CORS and 404 errors by using proper raw URLs
  * and fallback sources.
  *
- * It is now also patched to fix a dictionary parsing bug that caused conversion
- * chains beyond s2t (like s2tw, tw2s, etc.) to fail.
+ * This version is now patched to correctly parse all dictionary types,
+ * enabling full conversion chain support (s2t, s2tw, s2twp, s2hk, etc.).
  *
- * It is now streamlined to only support Simplified-to-Traditional conversions
- * to avoid 404 errors on missing reverse dictionaries.
- *
- * @version 1.2.5 (Simplified-to-Traditional only)
+ * @version 1.2.6 (Patched)
  * @license Apache-2.0
  */
 var OpenCC = (function() {
@@ -121,7 +118,8 @@ var OpenCC = (function() {
           const parts = trimmedLine.split('\t');
           if (parts.length >= 2) {
             const key = parts[0].trim();
-            const value = parts[1].trim().split(' ')[0];
+            // [FIXED] 移除 .split(' ')[0]，將 tab 後的整個字串視為值
+            const value = parts[1].trim(); 
             if (key && value) {
               dictData.push([key, value]);
             }
@@ -159,14 +157,15 @@ var OpenCC = (function() {
     };
   }
 
-  // 字典鏈配置 - 只保留簡體轉繁體
+  // 字典鏈配置
   const conversionChains = {
     's2t': ['STCharacters', 'STPhrases'],
     's2tw': ['STCharacters', 'STPhrases', 'TWVariants'],
     's2twp': ['STCharacters', 'STPhrases', 'TWVariants', 'TWPhrasesIT', 'TWPhrasesName'],
-    's2hk': ['STCharacters', 'STPhrases', 'HKVariants'],
+    // [MODIFIED] 根據要求移除 HKVariants
+    's2hk': ['STCharacters', 'STPhrases'], 
     
-    // 以下是從繁體到簡體的轉換鏈，因為會請求不存在的 Rev.txt 檔案，故移除
+    // 預設不支援繁轉簡，因為需要反向字典檔 (*Rev.txt)，此處保持註解
     // 't2s': ['TSCharacters', 'TSPhrases'],
     // 'tw2s': ['TWVariantsRev', 'TSCharacters', 'TSPhrases'],
     // 'tw2sp': ['TWVariantsRev', 'TWPhrasesITRev', 'TWPhrasesNameRev', 'TSCharacters', 'TSPhrases'],
@@ -212,21 +211,29 @@ var OpenCC = (function() {
   };
 })();
 
-// 使用範例：現在只會成功初始化簡轉繁的轉換器
+// 使用範例：現在所有簡轉繁的轉換器都應該能成功初始化並執行
 (async () => {
   try {
-    console.log('=== 測試簡體到台灣正體 (s2twp) ===');
+    console.log('=== 測試簡體到台灣正體用語 (s2twp) ===');
     const converter = await OpenCC.createConverter('s2twp');
-    let text = '滑鼠和裡面，還有憂鬱的烏龜';
+    // 測試範例包含了 s2t, s2tw, s2twp 中各層級字典會處理到的詞
+    let text = '服务器和打印机，里面有鼠标和忧郁的乌龟。';
     let result = converter(text);
-    console.log(`Input: "${text}"`);
-    console.log(`Output: "${result}"`); // 預期輸出: "滑鼠和裏面，還有憂鬱的烏龜"
+    console.log(`Input:  "${text}"`);
+    console.log(`Output: "${result}"`); // 預期輸出: "伺服器和印表機，裡面有滑鼠和憂鬱的烏龜。"
+
+    console.log('\n=== 測試簡體到香港繁體 (s2hk) ===');
+    const converter_s2hk = await OpenCC.createConverter('s2hk');
+    let text_hk = '我买了一只激光打印机。';
+    let result_hk = converter_s2hk(text_hk);
+    console.log(`Input:  "${text_hk}"`);
+    console.log(`Output: "${result_hk}"`); // 預期輸出: "我買了一隻激光打印機。" (HKVariants 已移除，所以不會轉成 '雷射')
 
     // 以下測試會因為轉換鏈被移除而失敗，這是預期行為
     try {
         console.log('\n=== 測試台灣正體到簡體 (會失敗) ===');
         const converter_tw2s = await OpenCC.createConverter('tw2s');
-        let text2 = '憂鬱的烏龜和裏面';
+        let text2 = '憂鬱的烏龜和裡面';
         let result2 = converter_tw2s(text2);
         console.log(`"${text2}" -> "${result2}"`);
     } catch (e) {
