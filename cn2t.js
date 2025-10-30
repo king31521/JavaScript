@@ -1,7 +1,7 @@
 /**
- * OpenCC-JS 修正版：容錯性的字典解析（支援任意空白分隔）並保持 TWVariants 最終逐字覆蓋
+ * OpenCC-JS 修正版：強制 TWVariants 最終逐字替換（更嚴謹的字典保留與逐字應用）
  *
- * @version 1.2.6 (改良字典解析)
+ * @version 1.2.7 (強制 TWVariants 最終逐字替換)
  * @license Apache-2.0
  */
 var OpenCC = (function() {
@@ -96,31 +96,22 @@ var OpenCC = (function() {
           if (trimmedLine === '' || trimmedLine.startsWith('#')) continue;
 
           // 支援任意空白（tab 或空格）作為 key/value 的分隔
-          // 找到第一個連續空白區段的位置
           const m = trimmedLine.match(/(\S+)\s+(.+)/);
           if (m) {
             const key = m[1];
             const valuesPart = m[2].trim();
-            // value 取第一個非空項目（以空白分隔）
             const value = valuesPart.split(/\s+/)[0];
-            if (key && value) {
+            if (key !== undefined && value !== undefined) {
               dictData.push([key, value]);
             }
           } else {
-            // 若沒有 match，記錄 debug（但不中斷）
-            // 某些檔案可能有以逗號或其他分隔，此時僅 log 出來方便排查
-            // 但不自動嘗試複雜解析以避免誤判
-            // 只在很少量的行出現才會被忽略
-            // 若需要更寬鬆解析，可改為更複雜的分隔策略
-            // eslint-disable-next-line no-console
-            console.debug(`[parse] Unrecognized line format in ${dictName} at line ${idx + 1}: "${raw}"`);
+            console.debug(`[parse] Unrecognized line in ${dictName} line ${idx + 1}: "${raw}"`);
           }
         }
 
         console.log(`[parse] ${dictName} parsed ${dictData.length} entries`);
         if (dictData.length === 0) {
-          // 顯示前幾行原始內容以利除錯
-          console.warn(`[parse] ${dictName} parsed 0 entries. First 8 raw lines:`, lines.slice(0, 8));
+          console.warn(`[parse] ${dictName} parsed 0 entries. Raw head:\n`, lines.slice(0, 8));
         } else {
           console.log(`[parse] ${dictName} sample:`, dictData.slice(0, 5));
         }
@@ -137,53 +128,86 @@ var OpenCC = (function() {
     return fetchPromise;
   }
 
+  /**
+   * ConverterFactory:
+   * - 接收原始 dictData 陣列與 dictNames
+   * - 建立 Trie 並保留 dictData 以供最終逐字替換
+   * - 最終逐字替換步驟會從所有逐字字典（或字典中所有 key 的字元）建立最終 charMap
+   */
   function ConverterFactory(dictionaries, dictNames, chainName) {
+    // 建 Trie 並紀錄插入數量
     const tries = dictionaries.map((dictData, idx) => {
       const trie = new Trie();
       let inserted = 0;
       for (const [k, v] of dictData) {
         if (k && v && k !== v) { trie.insert(k, v); inserted++; }
       }
-      console.log(`[factory] Trie ${dictNames[idx]} inserted ${inserted}`);
+      console.log(`[factory] Trie build ${dictNames[idx]} inserted ${inserted}`);
       return trie;
     });
 
-    // 建立逐字映射（若字典看起來是逐字類型）
-    const perCharMaps = [];
-    for (let i = 0; i < dictNames.length; i++) {
-      const name = dictNames[i];
-      const dictData = dictionaries[i];
+    // 保留原始 dictData（用於最終逐字替換）
+    const rawDicts = dictNames.map((name, idx) => ({ name, data: dictionaries[idx] }));
+
+    // 判斷哪些字典應視為逐字字典（啟發式）
+    function looksLikeCharDict(name, dictData) {
       let single = 0, total = 0;
       for (const [k] of dictData) { total++; if (k.length === 1) single++; }
-      const isCharDict = (single / Math.max(1, total)) > 0.6 || /Variants|HK|TW/i.test(name);
-      if (isCharDict) {
-        const map = Object.create(null);
-        for (const [k, v] of dictData) {
-          if (k && v && k.length === 1) map[k] = v;
-        }
-        perCharMaps.push({ name, map });
-        console.log(`[factory] Per-char map for ${name}: ${Object.keys(map).length}`);
-      } else {
-        perCharMaps.push({ name, map: null });
-      }
+      return (single / Math.max(1, total)) > 0.6 || /Variants|HK|TW/i.test(name);
     }
 
     return function(text) {
       let result = text;
+
+      // 1) 先逐字串/片語套用 Trie（保有長詞優先）
       for (let i = 0; i < tries.length; i++) {
         const prev = result;
         result = tries[i].convert(result);
-        if (result !== prev) console.log(`[convert] After ${dictNames[i]}: "${prev}" -> "${result}"`);
-      }
-
-      // 合併 per-char maps（後者覆蓋前者）
-      const finalMap = Object.create(null);
-      for (const entry of perCharMaps) {
-        if (entry.map) {
-          for (const ch in entry.map) finalMap[ch] = entry.map[ch];
+        if (result !== prev) {
+          console.log(`[convert] After ${dictNames[i]}: "${prev}" -> "${result}"`);
         }
       }
 
+      // 2) 強制最終逐字替換（從 rawDicts 建立 finalMap，後面的字典覆蓋前面的）
+      const finalMap = Object.create(null);
+
+      // a) 先把明顯的單字對應加入 finalMap（key.length === 1）
+      for (let i = 0; i < rawDicts.length; i++) {
+        const { name, data } = rawDicts[i];
+        if (!data || data.length === 0) continue;
+        // 若看起來像逐字字典，或名稱含 Variants，優先處理
+        if (looksLikeCharDict(name, data) || /Variants/i.test(name)) {
+          for (const [k, v] of data) {
+            if (k && v && k.length === 1) finalMap[k] = v;
+          }
+        }
+      }
+
+      // b) 若某些字仍未被替換，並且 rawDicts 中有多字 key（例如某些變體字典會有多字 key）
+      // 我們再做一個保守處理：對於每個 remaining 字元，若該字出現在任何 dict 的 key（無論 key 長度），
+      // 就使用該 dict 中第一個出現該字的 mapping（尊重 dicts 的順序由前到後，後者覆蓋前者）。
+      // 這步是為了捕捉「key 非單字但其中含有異體字」的情況
+      // 建立一個字元到映射的暫時表
+      const supplementalMap = Object.create(null);
+      for (let i = 0; i < rawDicts.length; i++) {
+        const { name, data } = rawDicts[i];
+        if (!data) continue;
+        for (const [k, v] of data) {
+          if (!k || !v) continue;
+          // 對 key 中的每個字元，若尚未在 supplementalMap 中登記，先登記一個候選（後面的字典會覆蓋）
+          for (const ch of k) {
+            // 只有在 ch 尚未有 finalMap 時才考慮（finalMap 優先級高）
+            if (!finalMap[ch]) supplementalMap[ch] = v;
+          }
+        }
+      }
+
+      // 合併 supplementalMap 到 finalMap（但不覆蓋已存在 finalMap）
+      for (const ch in supplementalMap) {
+        if (!finalMap[ch]) finalMap[ch] = supplementalMap[ch];
+      }
+
+      // c) 最終針對結果字串逐字替換
       if (Object.keys(finalMap).length > 0) {
         let changed = false;
         const out = [];
@@ -231,7 +255,7 @@ var OpenCC = (function() {
 
         console.log(`[create] Loaded dictionaries count: ${dictionaries.length}`);
 
-        // 顯示 TWVariants 狀態（若在 chain 裡）
+        // 顯示 TWVariants 的狀態以便 debug
         const twIdx = dictNames.indexOf('TWVariants');
         if (twIdx >= 0) {
           const tw = dictionaries[twIdx];
