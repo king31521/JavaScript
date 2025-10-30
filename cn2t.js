@@ -1,11 +1,11 @@
 /**
- * Modern, Promise-based, dependency-free OpenCC-JS.
+ * OpenCC-JS (self-contained) — 強化 TWVariants 載入檢查與 s2tw 測試
  *
- * This version includes robust parsing and adjusted dictionary chain order so
- * TWVariants mappings are applied correctly for s2tw conversions.
+ * Usage:
+ * - OpenCC.createConverter({ from: 's', to: 'tw' }) -> returns converter function with .info() and ._rawDicts()
+ * - OpenCC.testConversion(text, 's2tw') -> convenience test
  *
- * @version 1.2.4
- * @license Apache-2.0
+ * Paste entire file to browser Console to run immediate test for "這裏" -> "這裡".
  */
 var OpenCC = (function() {
   'use strict';
@@ -18,77 +18,59 @@ var OpenCC = (function() {
 
   const dictionaryCache = new Map();
 
-  function Trie() {
-    this.root = {};
-  }
+  function Trie() { this.root = {}; }
 
   Trie.prototype.insert = function(word, value) {
     let node = this.root;
-    for (const char of word) {
-      if (!node[char]) {
-        node[char] = {};
-      }
-      node = node[char];
+    for (const ch of word) {
+      if (!node[ch]) node[ch] = {};
+      node = node[ch];
     }
     node.value = value;
     node.wordEnd = true;
   };
 
   Trie.prototype.convert = function(text) {
-    let result = '';
+    let res = '';
     let i = 0;
-    const len = text.length;
-    while (i < len) {
+    const n = text.length;
+    while (i < n) {
       let node = this.root;
       let j = i;
       let lastMatch = null;
-
-      while (j < len && node[text[j]]) {
+      while (j < n && node[text[j]]) {
         node = node[text[j]];
-        if (node.wordEnd) {
-          lastMatch = {
-            end: j,
-            value: node.value
-          };
-        }
+        if (node.wordEnd) lastMatch = { end: j, value: node.value };
         j++;
       }
-
       if (lastMatch) {
-        result += lastMatch.value;
+        res += lastMatch.value;
         i = lastMatch.end + 1;
       } else {
-        result += text[i];
+        res += text[i];
         i++;
       }
     }
-    return result;
+    return res;
   };
 
   async function fetchWithFallback(dictName, baseSources) {
     let lastError = null;
     for (const baseUrl of baseSources) {
+      const url = `${baseUrl}${dictName}.txt`;
       try {
-        const url = `${baseUrl}${dictName}.txt`;
-        console.log(`Trying to fetch: ${url}`);
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Accept': 'text/plain, */*' },
-          mode: 'cors'
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const text = await response.text();
-        console.log(`Successfully fetched ${dictName} from ${baseUrl}`);
-        return text;
-      } catch (error) {
-        console.warn(`Failed to fetch ${dictName} from ${baseUrl}:`, error.message || error);
-        lastError = error;
-        continue;
+        console.log(`Fetching dictionary ${dictName} from ${url}`);
+        const resp = await fetch(url, { method: 'GET', mode: 'cors', headers: { 'Accept': 'text/plain, */*' } });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const txt = await resp.text();
+        console.log(`Fetched ${dictName} from ${baseUrl}`);
+        return txt;
+      } catch (err) {
+        console.warn(`Fetch failed for ${url}:`, err && err.message ? err.message : err);
+        lastError = err;
       }
     }
-    throw new Error(`Failed to fetch ${dictName} from all sources. Last error: ${lastError && lastError.message ? lastError.message : lastError}`);
+    throw new Error(`All sources failed for ${dictName}. Last: ${lastError && lastError.message ? lastError.message : lastError}`);
   }
 
   async function fetchAndParseDict(dictName, customBaseUrl = null) {
@@ -99,108 +81,93 @@ var OpenCC = (function() {
       return await dictionaryCache.get(cacheKey);
     }
 
-    const fetchPromise = (async () => {
+    const p = (async () => {
       try {
         const raw = await fetchWithFallback(dictName, sources);
-        // 支援 CRLF 與 LF，並移除 BOM
         const text = raw.replace(/^\uFEFF/, '');
         const lines = text.split(/\r?\n/);
-        const dictData = [];
+        const out = [];
 
         for (let line of lines) {
           if (!line) continue;
           line = line.trim();
           if (!line || line.startsWith('#')) continue;
 
-          // 支援 tab 或 多個空白作為 key/value 分隔，找到第一個 separator (tab 或 連續空白)
-          // 優先使用 tab，如果沒有則使用第一段空白分隔
           let key = null;
-          let valuesPart = null;
-
+          let values = null;
           const tabIndex = line.indexOf('\t');
           if (tabIndex >= 0) {
             key = line.substring(0, tabIndex).trim();
-            valuesPart = line.substring(tabIndex + 1).trim();
+            values = line.substring(tabIndex + 1).trim();
           } else {
-            // 使用第一個連續空白作為分隔點
             const m = line.match(/\s+/);
             if (m) {
               const idx = m.index;
+              const len = m[0].length;
               key = line.substring(0, idx).trim();
-              valuesPart = line.substring(idx + m[0].length).trim();
+              values = line.substring(idx + len).trim();
             } else {
-              // 若整行無分隔，跳過
               continue;
             }
           }
 
-          if (!key || !valuesPart) continue;
-
-          // 值可能包含多個候選，以任意空白分割，取第一個非空候選作為轉換值
-          const valueTokens = valuesPart.split(/\s+/).filter(Boolean);
-          if (valueTokens.length === 0) continue;
-          const value = valueTokens[0];
-
-          // 最後再做基本過濾（避免空字串）
-          if (key.length > 0 && value.length > 0) {
-            dictData.push([key, value]);
-          }
+          if (!key || !values) continue;
+          const tokens = values.split(/\s+/).filter(Boolean);
+          if (tokens.length === 0) continue;
+          const value = tokens[0];
+          out.push([key, value]);
         }
 
-        console.log(`Parsed ${dictData.length} entries from ${dictName}`);
-        if (dictData.length > 0) {
-          console.log(`${dictName} sample entries:`, dictData.slice(0, 5));
-        }
-
-        return dictData;
-      } catch (error) {
-        console.error(`Error parsing dictionary ${dictName}:`, error);
+        console.log(`Parsed ${out.length} entries from ${dictName}`);
+        return out;
+      } catch (err) {
         dictionaryCache.delete(cacheKey);
-        throw error;
+        throw err;
       }
     })();
 
-    dictionaryCache.set(cacheKey, fetchPromise);
-    return fetchPromise;
+    dictionaryCache.set(cacheKey, p);
+    return p;
   }
 
-  function ConverterFactory(dictionaries, chainName) {
-    const tries = dictionaries.map((dictData, index) => {
-      const trie = new Trie();
-      let insertCount = 0;
-      for (const [key, value] of dictData) {
-        if (key && value) {
-          // 不再以 key===value 一律跳過（某些字典可能有意義）
-          if (key !== value) {
-            trie.insert(key, value);
-            insertCount++;
-          } else {
-            // 若 key===value 但 key 為多字或有必要，仍可插入（此處保守策略只在不相等時插入）
-          }
+  function ConverterFactory(dictionaries, dictNames, chainName) {
+    const tries = dictionaries.map((d) => {
+      const t = new Trie();
+      let cnt = 0;
+      for (const [k, v] of d) {
+        if (k && v && k !== v) {
+          t.insert(k, v);
+          cnt++;
         }
       }
-      console.log(`Dictionary ${index} in ${chainName}: inserted ${insertCount} conversions`);
-      return trie;
+      return { trie: t, count: cnt };
     });
 
-    return function(text) {
-      let result = text;
+    function convert(text) {
+      let r = text;
       for (let i = 0; i < tries.length; i++) {
-        const previousResult = result;
-        result = tries[i].convert(result);
-        if (result !== previousResult) {
-          console.log(`Step ${i + 1} conversion: "${previousResult}" -> "${result}"`);
+        const prev = r;
+        r = tries[i].trie.convert(r);
+        if (r !== prev) {
+          console.log(`Chain ${chainName} step ${i + 1} applied`);
         }
       }
-      return result;
-    };
+      return r;
+    }
+
+    function info() {
+      return dictNames.map((name, idx) => {
+        const dictData = dictionaries[idx] || [];
+        return { name: name, entries: dictData.length, inserted: tries[idx] ? tries[idx].count : 0, sample: (dictData.slice ? dictData.slice(0, 10) : []) };
+      });
+    }
+
+    return { convert, info, _raw: { names: dictNames, data: dictionaries } };
   }
 
-  // 調整字典鏈順序：對 s2tw 將 TWVariants 放在 STPhrases 前或介於字符與片語之間
   const conversionChains = {
     's2t': ['STCharacters', 'STPhrases'],
     't2s': ['TSCharacters', 'TSPhrases'],
-    // 對 s2tw：先用 STCharacters，再用 TWVariants 做單字異體映射，最後用 STPhrases/短語映射修正片語
     's2tw': ['STCharacters', 'TWVariants', 'STPhrases'],
     'tw2s': ['TWVariantsRev', 'TSCharacters', 'TSPhrases'],
     's2twp': ['STCharacters', 'TWVariants', 'STPhrases', 'TWPhrasesIT', 'TWPhrasesName'],
@@ -213,44 +180,33 @@ var OpenCC = (function() {
     async createConverter(options) {
       try {
         let chainKey, baseUrl;
-
         if (typeof options === 'string') {
           chainKey = options;
           baseUrl = null;
         } else {
           chainKey = `${options.from}2${options.to}`;
-          baseUrl = options.dictPath;
+          baseUrl = options.dictPath || null;
         }
 
         const dictNames = conversionChains[chainKey];
-        if (!dictNames) {
-          throw new Error(`Conversion chain not found: ${chainKey}. Available chains: ${Object.keys(conversionChains).join(', ')}`);
-        }
+        if (!dictNames) throw new Error(`Conversion chain not found: ${chainKey}`);
 
-        console.log(`Creating converter for ${chainKey} with dictionaries:`, dictNames);
+        console.log(`Creating converter ${chainKey} with dicts:`, dictNames);
 
-        const dictionaries = await Promise.all(
-          dictNames.map(name => fetchAndParseDict(name, baseUrl))
-        );
+        const dictLoaders = dictNames.map(name => fetchAndParseDict(name, baseUrl));
+        const dictionaries = await Promise.all(dictLoaders);
 
-        console.log(`Successfully loaded all dictionaries for ${chainKey}`);
+        console.log(`Loaded ${dictionaries.length} dictionaries for ${chainKey}`);
 
-        if (chainKey === 's2tw' && dictionaries.length >= 2) {
-          // 顯示 TWVariants 條目數以利排查
-          const idx = dictNames.indexOf('TWVariants');
-          if (idx >= 0) {
-            const twVariantsDict = dictionaries[idx];
-            console.log(`TWVariants dictionary loaded with ${twVariantsDict.length} entries`);
-            if (twVariantsDict.length > 0) {
-              console.log('TWVariants sample entries:', twVariantsDict.slice(0, 10));
-            }
-          }
-        }
+        const factory = ConverterFactory(dictionaries, dictNames, chainKey);
 
-        return ConverterFactory(dictionaries, chainKey);
-      } catch (error) {
-        console.error('createConverter failed:', error);
-        throw error;
+        return Object.assign(factory.convert, {
+          info: () => factory.info(),
+          _rawDicts: () => ({ names: dictNames, data: dictionaries })
+        });
+      } catch (err) {
+        console.error('createConverter failed:', err && err.message ? err.message : err);
+        throw err;
       }
     },
 
@@ -265,27 +221,63 @@ var OpenCC = (function() {
 
     async testConversion(text, chainKey = 's2tw') {
       try {
-        console.log(`Testing conversion: ${chainKey}`);
-        console.log(`Input text: "${text}"`);
-        const converter = await this.createConverter(chainKey);
-        const result = converter(text);
-        console.log(`Final result: "${result}"`);
-        return result;
-      } catch (error) {
-        console.error('Test conversion failed:', error);
-        throw error;
+        console.log(`Testing conversion ${chainKey} for text: "${text}"`);
+        const conv = await this.createConverter(chainKey);
+        const res = conv(text);
+        console.log('Conversion result:', res);
+        if (typeof conv.info === 'function') {
+          console.log('Dictionaries info:', conv.info());
+        }
+        return res;
+      } catch (err) {
+        console.error('Test conversion failed:', err && err.message ? err.message : err);
+        throw err;
       }
     }
   };
 })();
 
-/* 使用範例（註解）： 
+// ------------------ immediate test ------------------
 (async () => {
   try {
-    const converter = await OpenCC.createConverter('s2tw');
-    console.log(converter('简体中文 裡面 裏面'));
-  } catch (e) {
-    console.error(e);
+    const conv = await OpenCC.createConverter({ from: 's', to: 'tw' });
+    console.log('Loaded dictionaries info:', conv.info());
+
+    const input = '這裏';
+    const output = conv(input);
+
+    console.log('Input :', input);
+    console.log('Output:', output);
+
+    if (output === '這裡') {
+      console.log('Result: SUCCESS — "這裏" converted to "這裡"');
+    } else {
+      console.warn('Result: FAILED — conversion did not produce "這裡"');
+      if (typeof conv._rawDicts === 'function') {
+        const raw = conv._rawDicts();
+        const dictNames = raw.names;
+        const dictData = raw.data;
+        const hits = [];
+        for (let i = 0; i < dictNames.length; i++) {
+          const name = dictNames[i];
+          const data = dictData[i] || [];
+          for (const [k, v] of data) {
+            if (k === '這裏' || v === '這裏' || (k && k.includes && k.includes('這裏')) || (v && v.includes && v.includes('這裏'))) {
+              hits.push({ dict: name, key: k, value: v });
+            }
+          }
+        }
+        if (hits.length > 0) {
+          console.log('Found entries related to "這裏":', hits.slice(0, 50));
+        } else {
+          console.warn('No entries for "這裏" found in loaded dictionaries.');
+          console.warn('If TWVariants seems empty, check network/CORS, dictPath, or supply a local TWVariants.txt.');
+        }
+      } else {
+        console.warn('Raw dictionary access not available on converter.');
+      }
+    }
+  } catch (err) {
+    console.error('Immediate test failed:', err);
   }
 })();
-*/
