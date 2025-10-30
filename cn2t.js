@@ -15,7 +15,7 @@ var OpenCC = (function() {
   'use strict';
 
   // 修正 1：將字典來源從不穩定的 master 分支鎖定到穩定的 v1.1.7 版本。
-  const DEFAULT_DICT_BASE_URL = 'https://github.com/BYVoid/OpenCC/tree/master/data/dictionary/';
+  const DEFAULT_DICT_BASE_URL = 'https://github.com/BYVoid/OpenCC/tree/eb495cd58d064471e9405bcd7a32e90f5dcb703d/data/dictionary/';
   const dictionaryCache = new Map();
 
   function Trie() {
