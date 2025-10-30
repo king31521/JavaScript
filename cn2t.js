@@ -8,7 +8,7 @@
  * This version is patched to fix CORS and 404 errors by using proper raw URLs
  * and fallback sources.
  *
- * @version 1.2.2 (CORS Fixed)
+ * @version 1.2.3 (TWVariants Bug Fixed)
  * @license Apache-2.0
  */
 var OpenCC = (function() {
@@ -50,6 +50,7 @@ var OpenCC = (function() {
       let j = i;
       let lastMatch = null;
 
+      // 尋找最長匹配
       while (j < text.length && node[text[j]]) {
         node = node[text[j]];
         if (node.wordEnd) {
@@ -85,7 +86,6 @@ var OpenCC = (function() {
           headers: {
             'Accept': 'text/plain, */*',
           },
-          // 如果是同源請求或支持 CORS 的源，使用默認模式
           mode: 'cors'
         });
         
@@ -127,16 +127,28 @@ var OpenCC = (function() {
             continue;
           }
           
-          const parts = trimmedLine.split('\t');
-          if (parts.length >= 2) {
-            const [key, value] = parts;
-            // 取第一個轉換選項（如果有多個選項的話）
-            const values = value.split(' ')[0];
-            dictData.push([key, values]);
+          // 修正：更嚴格的解析邏輯
+          const tabIndex = trimmedLine.indexOf('\t');
+          if (tabIndex > 0) {
+            const key = trimmedLine.substring(0, tabIndex);
+            const valuesPart = trimmedLine.substring(tabIndex + 1);
+            
+            // 取第一個轉換選項（用空格分隔）
+            const value = valuesPart.split(' ')[0];
+            
+            if (key && value) {
+              dictData.push([key, value]);
+            }
           }
         }
         
         console.log(`Parsed ${dictData.length} entries from ${dictName}`);
+        
+        // 調試：顯示前幾條記錄
+        if (dictData.length > 0) {
+          console.log(`${dictName} sample entries:`, dictData.slice(0, 3));
+        }
+        
         return dictData;
         
       } catch (error) {
@@ -150,25 +162,45 @@ var OpenCC = (function() {
     return fetchPromise;
   }
   
-  function ConverterFactory(dictionaries) {
-    const tries = dictionaries.map(dictData => {
+  function ConverterFactory(dictionaries, chainName) {
+    const tries = dictionaries.map((dictData, index) => {
       const trie = new Trie();
+      let insertCount = 0;
+      
       for (const [key, value] of dictData) {
-        trie.insert(key, value);
+        if (key && value && key !== value) { // 只插入有意義的轉換
+          trie.insert(key, value);
+          insertCount++;
+        }
       }
+      
+      console.log(`Dictionary ${index} in ${chainName}: inserted ${insertCount} conversions`);
       return trie;
     });
 
     return function(text) {
-      return tries.reduce((currentText, trie) => trie.convert(currentText), text);
+      let result = text;
+      
+      // 逐步應用每個字典的轉換
+      for (let i = 0; i < tries.length; i++) {
+        const previousResult = result;
+        result = tries[i].convert(result);
+        
+        // 調試：顯示每步轉換結果
+        if (result !== previousResult) {
+          console.log(`Step ${i + 1} conversion: "${previousResult}" -> "${result}"`);
+        }
+      }
+      
+      return result;
     };
   }
 
-  // 字典鏈配置
+  // 字典鏈配置 - 確保 TWVariants 在正確位置
   const conversionChains = {
     's2t': ['STCharacters', 'STPhrases'],
     't2s': ['TSCharacters', 'TSPhrases'],
-    's2tw': ['STCharacters', 'STPhrases', 'TWVariants'],
+    's2tw': ['STCharacters', 'STPhrases', 'TWVariants'], // 確保 TWVariants 最後執行
     'tw2s': ['TWVariantsRev', 'TSCharacters', 'TSPhrases'],
     's2twp': ['STCharacters', 'STPhrases', 'TWVariants', 'TWPhrasesIT', 'TWPhrasesName'],
     'tw2sp': ['TWVariantsRev', 'TWPhrasesITRev', 'TWPhrasesNameRev', 'TSCharacters', 'TSPhrases'],
@@ -202,7 +234,17 @@ var OpenCC = (function() {
         );
         
         console.log(`Successfully loaded all dictionaries for ${chainKey}`);
-        return ConverterFactory(dictionaries);
+        
+        // 驗證 TWVariants 字典是否正確加載
+        if (chainKey === 's2tw' && dictionaries.length >= 3) {
+          const twVariantsDict = dictionaries[2]; // TWVariants 應該是第三個
+          console.log(`TWVariants dictionary loaded with ${twVariantsDict.length} entries`);
+          if (twVariantsDict.length > 0) {
+            console.log('TWVariants sample entries:', twVariantsDict.slice(0, 5));
+          }
+        }
+        
+        return ConverterFactory(dictionaries, chainKey);
         
       } catch (error) {
         console.error('createConverter failed:', error);
@@ -219,21 +261,48 @@ var OpenCC = (function() {
     // 新增：取得支援的轉換鏈
     getSupportedConversions() {
       return Object.keys(conversionChains);
+    },
+    
+    // 新增：測試方法，用於調試
+    async testConversion(text, chainKey = 's2tw') {
+      try {
+        console.log(`Testing conversion: ${chainKey}`);
+        console.log(`Input text: "${text}"`);
+        
+        const converter = await this.createConverter(chainKey);
+        const result = converter(text);
+        
+        console.log(`Final result: "${result}"`);
+        return result;
+      } catch (error) {
+        console.error('Test conversion failed:', error);
+        throw error;
+      }
     }
   };
 })();
 
-// 使用範例：
+// 使用範例和測試：
 /*
 (async () => {
   try {
-    // 創建簡體到繁體轉換器
-    const converter = await OpenCC.createConverter('s2t');
-    console.log(converter('简体中文'));  // 輸出：簡體中文
+    // 測試簡體到台灣正體的轉換
+    console.log('=== Testing s2tw conversion ===');
+    const converter = await OpenCC.createConverter('s2tw');
     
-    // 或使用物件語法
-    const converter2 = await OpenCC.createConverter({ from: 's', to: 'tw' });
-    console.log(converter2('简体中文'));  // 輸出：簡體中文
+    // 測試一些包含異體字的文本
+    const testTexts = [
+      '简体中文',
+      '台湾正体',
+      '繁體字',
+      '裡面',
+      '裏面'
+    ];
+    
+    for (const text of testTexts) {
+      const result = converter(text);
+      console.log(`"${text}" -> "${result}"`);
+    }
     
   } catch (error) {
     console.error('轉換器創建失敗:', error);
