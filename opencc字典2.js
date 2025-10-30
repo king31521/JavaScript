@@ -28,7 +28,7 @@
     const CONFIG = {
         // 字典檔案的 CDN 來源，指向 JSDelivr 上的 NPM 套件 'opencc'
         dictBaseUrls: [
-            'https://github.com/BYVoid/OpenCC/tree/master/data/dictionary/',
+            'https://github.com/BYVoid/OpenCC/tree/eb495cd58d064471e9405bcd7a32e90f5dcb703d/data/dictionary/',
             'https://fastly.jsdelivr.net/npm/opencc?tab=files&path=data%2Fdictionary/', // JSDelivr 備援
         ],
         // 可用的轉換模式及其所需的字典
