@@ -1,12 +1,11 @@
 // ==UserScript==
-// @name         OpenCC-JS s2twp Auto-translate (Tampermonkey)
+// @name         OpenCC-JS s2twp Auto-translate (Tampermonkey) - No UI
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Auto-convert Simplified Chinese on pages to Traditional Taiwanese (s2twp) using OpenCC dictionaries and GM_xmlhttpRequest. Exposes window.OpenCC.
+// @version      1.2
+// @description  Auto-convert Simplified Chinese on pages to Traditional Taiwanese (s2twp) using OpenCC dictionaries and GM_xmlhttpRequest. Exposes window.OpenCC. UI toggle removed.
 // @author       Converted
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
-// @grant        GM_addStyle
 // @connect      cdn.jsdelivr.net
 // @connect      fastly.jsdelivr.net
 // @connect      unpkg.com
@@ -285,25 +284,6 @@
   } else {
     window.addEventListener('DOMContentLoaded', initAndRunAutoConvert, { once: true });
   }
-
-  // small UI: toggle button to enable/disable auto-replace
-  GM_addStyle(`
-    #opencc-toggle-btn {
-      position: fixed; right: 12px; bottom: 12px; z-index: 999999; background:#2d8cff; color:#fff;
-      padding:6px 8px; border-radius:4px; font-size:12px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.3)
-    }
-  `);
-  let enabled = true;
-  const btn = document.createElement('button');
-  btn.id = 'opencc-toggle-btn';
-  btn.textContent = 'OpenCC: ON';
-  btn.title = 'Toggle OpenCC auto-translate';
-  btn.addEventListener('click', () => {
-    enabled = !enabled;
-    btn.textContent = enabled ? 'OpenCC: ON' : 'OpenCC: OFF';
-    if (enabled && isReady) initAndRunAutoConvert();
-  });
-  document.documentElement.appendChild(btn);
 
   // expose helper to manually run conversion on a string or element
   window.OpenCC_convertNode = async function(nodeOrText) {
