@@ -2,7 +2,7 @@
 cn2t.js: Open Chinese Convert (OpenCC) in JavaScript
 https://github.com/nk2028/cn2t.js
 
-Version: 1.0.4
+Version: 1.0.5 (Patched)
 
 This is a modified version by an AI assistant.
 Key changes:
@@ -10,8 +10,9 @@ Key changes:
 2. Dictionaries are now fetched asynchronously from the OpenCC GitHub repository.
 3. The main export is an async function `createConverter`.
 4. Added caching to avoid re-downloading dictionaries.
-5. (v1.0.4) Fixed a bug in dictionary parsing to correctly handle one-to-many mappings,
-   adhering to the OpenCC standard of using the first candidate.
+5. (v1.0.4) Fixed a bug in dictionary parsing to correctly handle one-to-many mappings.
+6. (v1.0.5) Corrected the dictionary processing order in `localePreset` to ensure
+   proper conversion to regional standards (e.g., TW/HK variants).
 */
 
 (function(exports) {
@@ -105,20 +106,16 @@ Key changes:
         return text
           .split('\n')
           .filter(line => line && !line.startsWith('#')) // 過濾空行和註解
-          // --- 以下是 v1.0.4 的核心修正 ---
           .map(line => {
             const parts = line.split('\t');
-            // 確保行格式正確，至少有一個 key 和一個 value
             if (parts.length < 2) return null;
 
             const key = parts[0];
-            // OpenCC 規則：值可以是用空格分隔的多個候選詞，預設取第一個
             const value = parts[1].split(' ')[0]; 
 
             return [key, value];
           })
-          .filter(Boolean); // 過濾掉上面產生的 null (格式不正確的行)
-          // --- 修正結束 ---
+          .filter(Boolean); // 過濾掉格式不正確的行
       });
     
     // 將 promise 存入快取，這樣即使同時請求多次也只會下載一次
@@ -126,21 +123,26 @@ Key changes:
     return promise;
   }
 
-  // 定義各種轉換所需的字典檔名
+  // --- 修正開始 ---
+  // 定義各種轉換所需的字典檔名 (已修正順序)
+  // 這是解決「異體字無法轉換」問題的關鍵
   const localePreset = {
+    // 順序規則：先處理詞彙 (Phrases)，再處理單字 (Characters)
     from: {
-      's': ['STCharacters', 'STPhrases'], // 簡體到繁體
-      't': ['TSCharacters', 'TSPhrases'], // 繁體到簡體
-      'tw': ['TWVariantsRev', 'TSCharacters', 'TSPhrases'], // 台灣繁體到簡體
-      'hk': ['HKVariantsRev', 'TSCharacters', 'TSPhrases'], // 香港繁體到簡體
+      's': ['STPhrases', 'STCharacters'],
+      't': ['TSPhrases', 'TSCharacters'],
+      'tw': ['TWVariantsRev', 'TSPhrases', 'TSCharacters'], // 先處理台灣特有字(Rev)，再進行繁轉簡
+      'hk': ['HKVariantsRev', 'TSPhrases', 'TSCharacters'], // 先處理香港特有字(Rev)，再進行繁轉簡
     },
+    // 順序規則：先處理地區用詞 (Phrases)，再處理異體字 (Variants)
     to: {
-      't': [], // 簡體到繁體 (字典已在 'from' 中定義)
-      's': [], // 繁體到簡體 (字典已在 'from' 中定義)
-      'tw': ['TWVariants', 'TWPhrases'], // 簡體到台灣繁體
-      'hk': ['HKVariants', 'HKPhrases'], // 簡體到香港繁體
+      't': [], 
+      's': [], 
+      'tw': ['TWPhrases', 'TWVariants'],
+      'hk': ['HKPhrases', 'HKVariants'],
     }
   };
+  // --- 修正結束 ---
 
   /**
    * [非同步] 建立一個 OpenCC 轉換器 (從 GitHub 獲取字典)
@@ -159,13 +161,13 @@ Key changes:
 
     // 處理 t2tw, t2hk 等轉換鏈
     if(from === 't' && (to === 'tw' || to === 'hk')) {
-        dictNameGroups.push(localePreset.from['t']); // t2s
-        dictNameGroups.push(localePreset.to[to]); // s2tw or s2hk
+        // 繁體轉地區正體，直接使用 to 的字典
+        dictNameGroups.push(localePreset.to[to]);
     } 
     // 處理 tw2t, hk2t 等轉換鏈
     else if ((from === 'tw' || from ==='hk') && to === 't') {
-        dictNameGroups.push(localePreset.from[from]); // tw2s or hk2s
-        dictNameGroups.push(localePreset.from['s']); // s2t
+        // 地區正體轉繁體，使用 from 的反向字典
+        dictNameGroups.push(localePreset.from[from].filter(name => name.includes('Rev')));
     }
     else {
         if (localePreset.from[from]) {
@@ -176,7 +178,9 @@ Key changes:
         }
     }
     
-    const allDictNames = [].concat(...dictNameGroups);
+    // 修正了 createConverter 中的邏輯，使其更準確地處理轉換鏈
+    const allDictNamesRaw = [].concat.apply([], dictNameGroups); 
+    const allDictNames = allDictNamesRaw.filter(d => d); // 過濾掉空字串
     const uniqueDictNames = [...new Set(allDictNames)]; // 去除重複的字典
 
     // 平行下載所有字典
