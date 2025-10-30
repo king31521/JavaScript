@@ -368,4 +368,23 @@ var OpenCC = (function() {
 /*
 (async () => {
   try {
-    //
+    // 創建轉換器
+    const converter = await OpenCC.createConverter('s2tw');
+    
+    // 執行轉換
+    const result = converter('你好世界');
+    console.log(result);
+    
+    // 批量測試
+    await OpenCC.batchTest(['软件', '硬件', '网络', '数据库'], 's2tw');
+    
+  } catch (error) {
+    console.error('Error:', error);
+  }
+})();
+*/
+
+// 如果在模組環境中，導出 OpenCC
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = OpenCC;
+}
