@@ -1,7 +1,7 @@
 /**
- * Modern, Promise-based, dependency-free OpenCC-JS (s2twp only).
+ * Modern, Promise-based, dependency-free OpenCC-JS (s2twp only) — with s2t fallback.
  *
- * @version trimmed-for-s2twp
+ * @version s2twp-with-fallback
  * @license Apache-2.0
  */
 var OpenCC = (function() {
@@ -86,7 +86,7 @@ var OpenCC = (function() {
         return text;
 
       } catch (error) {
-        console.warn(`Failed to fetch ${dictName} from ${baseUrl}:`, error.message);
+        console.warn(`Failed to fetch ${dictName} from ${baseUrl}:`, error && error.message);
         lastError = error;
         continue;
       }
@@ -182,17 +182,43 @@ var OpenCC = (function() {
     's2twp': ['STCharacters', 'STPhrases', 'TWVariants', 'TWPhrasesIT', 'TWPhrasesName']
   };
 
+  // Fallback mapping for compatibility
+  function resolveChainKey(requested) {
+    if (!requested) return 's2twp';
+    // direct string
+    if (typeof requested === 'string') {
+      if (conversionChains[requested]) return requested;
+      // common legacy requests mapped to s2twp
+      if (requested === 's2t' || requested === 's2tw' || requested === 's2twp') return 's2twp';
+      return requested;
+    }
+    // object {from, to}
+    if (typeof requested === 'object' && requested.from && requested.to) {
+      const key = `${requested.from}2${requested.to}`;
+      if (conversionChains[key]) return key;
+      // map simple s->t to s2twp
+      if (requested.from === 's' && (requested.to === 't' || requested.to === 'tw' || requested.to === 'twp')) return 's2twp';
+      return key;
+    }
+    return 's2twp';
+  }
+
   return {
     async createConverter(options) {
       try {
-        let chainKey, baseUrl;
+        // Resolve chain key with compatibility fallback
+        let chainKey;
+        let baseUrl = null;
 
-        if (typeof options === 'string') {
-          chainKey = options;
-          baseUrl = null;
+        if (options === undefined || options === null) {
+          chainKey = 's2twp';
+        } else if (typeof options === 'string') {
+          chainKey = resolveChainKey(options);
+        } else if (typeof options === 'object') {
+          baseUrl = options.dictPath || null;
+          chainKey = resolveChainKey(options);
         } else {
-          chainKey = `${options.from}2${options.to}`;
-          baseUrl = options.dictPath;
+          chainKey = 's2twp';
         }
 
         const dictNames = conversionChains[chainKey];
