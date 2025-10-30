@@ -1,7 +1,7 @@
 /**
- * Modern, Promise-based, dependency-free OpenCC-JS (s2twp only) — with s2t fallback.
+ * OpenCC-JS (s2twp only) — force s2t -> s2twp mapping to avoid "Conversion chain not found: s2t"
  *
- * @version s2twp-with-fallback
+ * @version s2twp-force-s2t
  * @license Apache-2.0
  */
 var OpenCC = (function() {
@@ -22,9 +22,7 @@ var OpenCC = (function() {
   Trie.prototype.insert = function(word, value) {
     let node = this.root;
     for (const char of word) {
-      if (!node[char]) {
-        node[char] = {};
-      }
+      if (!node[char]) node[char] = {};
       node = node[char];
     }
     node.value = value;
@@ -41,12 +39,7 @@ var OpenCC = (function() {
 
       while (j < text.length && node[text[j]]) {
         node = node[text[j]];
-        if (node.wordEnd) {
-          lastMatch = {
-            end: j,
-            value: node.value
-          };
-        }
+        if (node.wordEnd) lastMatch = { end: j, value: node.value };
         j++;
       }
 
@@ -62,163 +55,121 @@ var OpenCC = (function() {
   };
 
   async function fetchWithFallback(dictName, baseSources) {
-    let lastError;
-
+    let lastError = null;
     for (const baseUrl of baseSources) {
       try {
         const url = `${baseUrl}${dictName}.txt`;
         console.log(`Trying to fetch: ${url}`);
-
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'text/plain, */*',
-          },
-          mode: 'cors'
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
+        const response = await fetch(url, { method: 'GET', headers: { 'Accept': 'text/plain, */*' }, mode: 'cors' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         const text = await response.text();
         console.log(`Successfully fetched ${dictName} from ${baseUrl}`);
         return text;
-
-      } catch (error) {
-        console.warn(`Failed to fetch ${dictName} from ${baseUrl}:`, error && error.message);
-        lastError = error;
-        continue;
+      } catch (err) {
+        console.warn(`Failed to fetch ${dictName} from ${baseUrl}:`, err && err.message);
+        lastError = err;
       }
     }
-
     throw new Error(`Failed to fetch ${dictName} from all sources. Last error: ${lastError && lastError.message}`);
   }
 
   async function fetchAndParseDict(dictName, customBaseUrl = null) {
     const sources = customBaseUrl ? [customBaseUrl] : DICT_SOURCES;
     const cacheKey = `${sources.join(',')}:${dictName}`;
+    if (dictionaryCache.has(cacheKey)) return await dictionaryCache.get(cacheKey);
 
-    if (dictionaryCache.has(cacheKey)) {
-      return await dictionaryCache.get(cacheKey);
-    }
-
-    const fetchPromise = (async () => {
+    const p = (async () => {
       try {
         const text = await fetchWithFallback(dictName, sources);
         const lines = text.split('\n');
         const dictData = [];
-
         for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (trimmedLine === '' || trimmedLine.startsWith('#')) {
-            continue;
-          }
-
-          const tabIndex = trimmedLine.indexOf('\t');
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) continue;
+          const tabIndex = trimmed.indexOf('\t');
           if (tabIndex > 0) {
-            const key = trimmedLine.substring(0, tabIndex);
-            const valuesPart = trimmedLine.substring(tabIndex + 1);
+            const key = trimmed.substring(0, tabIndex);
+            const valuesPart = trimmed.substring(tabIndex + 1);
             const value = valuesPart.split(' ')[0];
-
-            if (key && value) {
-              dictData.push([key, value]);
-            }
+            if (key && value) dictData.push([key, value]);
           }
         }
-
         console.log(`Parsed ${dictData.length} entries from ${dictName}`);
-        if (dictData.length > 0) {
-          console.log(`${dictName} sample entries:`, dictData.slice(0, 3));
-        }
-
+        if (dictData.length) console.log(`${dictName} sample entries:`, dictData.slice(0, 3));
         return dictData;
-
-      } catch (error) {
-        console.error(`Error parsing dictionary ${dictName}:`, error);
+      } catch (err) {
+        console.error(`Error parsing dictionary ${dictName}:`, err);
         dictionaryCache.delete(cacheKey);
-        throw error;
+        throw err;
       }
     })();
 
-    dictionaryCache.set(cacheKey, fetchPromise);
-    return fetchPromise;
+    dictionaryCache.set(cacheKey, p);
+    return p;
   }
 
   function ConverterFactory(dictionaries, chainName) {
-    const tries = dictionaries.map((dictData, index) => {
+    const tries = dictionaries.map((dictData, idx) => {
       const trie = new Trie();
-      let insertCount = 0;
-
-      for (const [key, value] of dictData) {
-        if (key && value && key !== value) {
-          trie.insert(key, value);
-          insertCount++;
-        }
+      let inserted = 0;
+      for (const [k, v] of dictData) {
+        if (k && v && k !== v) { trie.insert(k, v); inserted++; }
       }
-
-      console.log(`Dictionary ${index} in ${chainName}: inserted ${insertCount} conversions`);
+      console.log(`Dictionary ${idx} in ${chainName}: inserted ${inserted} conversions`);
       return trie;
     });
 
     return function(text) {
       let result = text;
-
       for (let i = 0; i < tries.length; i++) {
-        const previousResult = result;
+        const before = result;
         result = tries[i].convert(result);
-
-        if (result !== previousResult) {
-          console.log(`Step ${i + 1} conversion: "${previousResult}" -> "${result}"`);
-        }
+        if (result !== before) console.log(`Step ${i + 1} conversion: "${before}" -> "${result}"`);
       }
-
       return result;
     };
   }
 
-  // Only the s2twp chain is kept
+  // Only s2twp chain kept
   const conversionChains = {
     's2twp': ['STCharacters', 'STPhrases', 'TWVariants', 'TWPhrasesIT', 'TWPhrasesName']
   };
 
-  // Fallback mapping for compatibility
-  function resolveChainKey(requested) {
-    if (!requested) return 's2twp';
-    // direct string
-    if (typeof requested === 'string') {
-      if (conversionChains[requested]) return requested;
-      // common legacy requests mapped to s2twp
-      if (requested === 's2t' || requested === 's2tw' || requested === 's2twp') return 's2twp';
-      return requested;
+  // Normalize and force-map various requests to s2twp if appropriate
+  function normalizeRequested(options) {
+    // If string, normalize and map known legacy keys
+    if (typeof options === 'string') {
+      const key = options.trim().toLowerCase();
+      if (key === 's2t' || key === 's2tw' || key === 's2twp' || key === 's2twp') return { chain: 's2twp', baseUrl: null };
+      return { chain: key, baseUrl: null };
     }
-    // object {from, to}
-    if (typeof requested === 'object' && requested.from && requested.to) {
-      const key = `${requested.from}2${requested.to}`;
-      if (conversionChains[key]) return key;
-      // map simple s->t to s2twp
-      if (requested.from === 's' && (requested.to === 't' || requested.to === 'tw' || requested.to === 'twp')) return 's2twp';
-      return key;
+
+    // If object like {from:'s', to:'t'}
+    if (typeof options === 'object' && options !== null) {
+      const from = (options.from || '').toString().trim().toLowerCase();
+      const to = (options.to || '').toString().trim().toLowerCase();
+      const baseUrl = options.dictPath || options.dictpath || null;
+      if (from === 's' && (to === 't' || to === 'tw' || to === 'twp')) return { chain: 's2twp', baseUrl };
+      const key = `${from}2${to}`;
+      return { chain: key, baseUrl };
     }
-    return 's2twp';
+
+    // default fallback
+    return { chain: 's2twp', baseUrl: null };
   }
 
   return {
     async createConverter(options) {
       try {
-        // Resolve chain key with compatibility fallback
-        let chainKey;
-        let baseUrl = null;
+        const normalized = normalizeRequested(options);
+        let chainKey = normalized.chain;
+        const baseUrl = normalized.baseUrl || null;
 
-        if (options === undefined || options === null) {
-          chainKey = 's2twp';
-        } else if (typeof options === 'string') {
-          chainKey = resolveChainKey(options);
-        } else if (typeof options === 'object') {
-          baseUrl = options.dictPath || null;
-          chainKey = resolveChainKey(options);
-        } else {
-          chainKey = 's2twp';
+        // Defensive: also explicitly map plain 's2t' and uppercase variants
+        if (typeof chainKey === 'string') {
+          const ck = chainKey.trim().toLowerCase();
+          if (ck === 's2t' || ck === 's2tw') chainKey = 's2twp';
+          else chainKey = ck;
         }
 
         const dictNames = conversionChains[chainKey];
@@ -228,27 +179,22 @@ var OpenCC = (function() {
 
         console.log(`Creating converter for ${chainKey} with dictionaries:`, dictNames);
 
-        const dictionaries = await Promise.all(
-          dictNames.map(name => fetchAndParseDict(name, baseUrl))
-        );
+        const dictionaries = await Promise.all(dictNames.map(n => fetchAndParseDict(n, baseUrl)));
 
         console.log(`Successfully loaded all dictionaries for ${chainKey}`);
 
-        // Verify TWVariants loaded if present
-        const twIndex = dictNames.indexOf('TWVariants');
-        if (twIndex >= 0 && dictionaries.length > twIndex) {
-          const twVariantsDict = dictionaries[twIndex];
-          console.log(`TWVariants dictionary loaded with ${twVariantsDict.length} entries`);
-          if (twVariantsDict.length > 0) {
-            console.log('TWVariants sample entries:', twVariantsDict.slice(0, 5));
-          }
+        // debug: TWVariants check
+        const twIdx = dictNames.indexOf('TWVariants');
+        if (twIdx >= 0 && dictionaries.length > twIdx) {
+          console.log(`TWVariants dictionary loaded with ${dictionaries[twIdx].length} entries`);
+          if (dictionaries[twIdx].length) console.log('TWVariants sample entries:', dictionaries[twIdx].slice(0, 5));
         }
 
         return ConverterFactory(dictionaries, chainKey);
 
-      } catch (error) {
-        console.error('createConverter failed:', error);
-        throw error;
+      } catch (err) {
+        console.error('createConverter failed:', err);
+        throw err;
       }
     },
 
@@ -264,16 +210,13 @@ var OpenCC = (function() {
     async testConversion(text, chainKey = 's2twp') {
       try {
         console.log(`Testing conversion: ${chainKey}`);
-        console.log(`Input text: "${text}"`);
-
-        const converter = await this.createConverter(chainKey);
-        const result = converter(text);
-
-        console.log(`Final result: "${result}"`);
-        return result;
-      } catch (error) {
-        console.error('Test conversion failed:', error);
-        throw error;
+        const conv = await this.createConverter(chainKey);
+        const out = conv(text);
+        console.log(`Final result: "${out}"`);
+        return out;
+      } catch (err) {
+        console.error('Test conversion failed:', err);
+        throw err;
       }
     }
   };
