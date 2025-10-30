@@ -4,15 +4,18 @@
  * This version is modified to be configurable, allowing the dictionary path to be
  * specified during converter creation. This is ideal for use in environments like
  * Tampermonkey where using a CDN is preferable.
+ * 
+ * This version is patched to fix 404 errors by pinning to a stable version and
+ * updating the dictionary chains.
  *
- * @version 1.2.0 (Configurable Edition)
+ * @version 1.2.1 (Patched)
  * @license Apache-2.0
  */
 var OpenCC = (function() {
   'use strict';
 
-  // 修改：將 URL 變為可配置的預設值
-  const DEFAULT_DICT_BASE_URL = 'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@master/data/dictionary/';
+  // 修正 1：將字典來源從不穩定的 master 分支鎖定到穩定的 v1.1.7 版本。
+  const DEFAULT_DICT_BASE_URL = 'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@v1.1.7/data/dictionary/';
   const dictionaryCache = new Map();
 
   function Trie() {
@@ -61,9 +64,8 @@ var OpenCC = (function() {
     return result;
   };
 
-  // 修改：fetchAndParseDict 接收 baseUrl 作為參數
   async function fetchAndParseDict(dictName, baseUrl) {
-    const cacheKey = `${baseUrl}:${dictName}`; // 緩存鍵需要包含 baseUrl
+    const cacheKey = `${baseUrl}:${dictName}`;
     if (dictionaryCache.has(cacheKey)) {
       return await dictionaryCache.get(cacheKey);
     }
@@ -115,30 +117,30 @@ var OpenCC = (function() {
     };
   }
 
+  // 修正 2：更新字典列表以對應新的檔案結構，解決 TWPhrases.txt 404 問題。
   const conversionChains = {
     's2t': ['STPhrases', 'STCharacters'],
     't2s': ['TSPhrases', 'TSCharacters'],
     's2tw': ['STPhrases', 'STCharacters', 'TWVariants'],
     'tw2s': ['TWVariantsRev', 'TSPhrases', 'TSCharacters'],
-    's2twp': ['STPhrases', 'STCharacters', 'TWPhrases', 'TWVariants'],
-    'tw2sp': ['TWVariantsRev', 'TWPhrasesRev', 'TSPhrases', 'TSCharacters'],
+    's2twp': ['STPhrases', 'STCharacters', 'TWPhrasesIT', 'TWPhrasesName', 'TWVariants'],
+    'tw2sp': ['TWVariantsRev', 'TWPhrasesITRev', 'TWPhrasesNameRev', 'TSPhrases', 'TSCharacters'],
     's2hk': ['STPhrases', 'STCharacters', 'HKVariants'],
     'hk2s': ['HKVariantsRev', 'TSPhrases', 'TSCharacters'],
   };
   
   return {
     async createConverter(options) {
-      let chainKey = `${options.from}2${options.to}`;
+      // 支援 { from: 's', to: 'twp' } 或直接傳入 's2twp'
+      const chainKey = typeof options === 'string' ? options : `${options.from}2${options.to}`;
       const dictNames = conversionChains[chainKey];
 
       if (!dictNames) {
-        throw new Error(`Conversion chain not found: from '${options.from}' to '${options.to}'`);
+        throw new Error(`Conversion chain not found: ${chainKey}`);
       }
       
-      // 新增：讀取傳入的 dictPath，如果沒有則使用預設值
-      const baseUrl = options.dictPath || DEFAULT_DICT_BASE_URL;
+      const baseUrl = (options && options.dictPath) ? options.dictPath : DEFAULT_DICT_BASE_URL;
 
-      // 修改：將 baseUrl 傳遞給字典獲取函數
       const dictionaries = await Promise.all(dictNames.map(name => fetchAndParseDict(name, baseUrl)));
       
       return ConverterFactory(dictionaries);
