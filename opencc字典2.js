@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         網頁簡轉繁 (OpenCC)
+// @name         網頁簡轉繁 (OpenCC) - 支援屬性變化
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  使用 OpenCC 將網頁內文從簡體中文轉換為繁體中文，並支援動態載入內容的轉換。
+// @version      1.2
+// @description  使用 OpenCC 將網頁從簡體轉換為繁體，並支援動態載入及因元素屬性變化而顯示的內容（如NGA隱藏留言）。
 // @author       Original Author & Modified by AI
 // @match        *://*/*
 // @exclude      *://*.google.com/*
@@ -67,6 +67,10 @@
     function translatePage(rootNode = document.body) {
         if (!rootNode || typeof rootNode.querySelectorAll !== 'function') return;
 
+        // 防止重複翻譯已經標記過的節點
+        if (rootNode.dataset.translated === 'true') return;
+        // rootNode.dataset.translated = 'true'; // 可選：如果性能有問題，可以啟用此行，但可能會漏掉後續更新的內容
+
         const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
             acceptNode: function(node) {
                 // 排除 <script>, <style>, <textarea>, <input> 等標籤內的文字
@@ -111,24 +115,46 @@
     console.log('Performing initial page translation...');
     translatePage(document.body);
 
-    // 3. 使用 MutationObserver 監聽後續 DOM 變化，以轉換動態載入的內容
+    // 3. 使用 MutationObserver 監聽後續 DOM 變化，以轉換動態載入或顯示的內容
     const observer = new MutationObserver(mutations => {
+        // 使用 Set 來避免在一次批次處理中重複翻譯同一個元素節點
+        const elementsToTranslate = new Set();
+
         for (const mutation of mutations) {
-            for (const node of mutation.addedNodes) {
-                // 只處理元素節點，因為 TreeWalker 會處理其下的文字節點
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    translatePage(node);
+            if (mutation.type === 'childList') {
+                // 處理新增的節點
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        elementsToTranslate.add(node);
+                    }
+                }
+            } else if (mutation.type === 'attributes') {
+                // 處理屬性變化，例如 style 或 class 的改變導致元素可見
+                // mutation.target 是屬性發生變化的那個元素
+                if (mutation.target.nodeType === Node.ELEMENT_NODE) {
+                     elementsToTranslate.add(mutation.target);
+                }
+            }
+        }
+
+        // 對收集到的所有待處理元素執行翻譯
+        if (elementsToTranslate.size > 0) {
+            for (const element of elementsToTranslate) {
+                // 確保節點仍然在頁面上，避免處理已移除的節點
+                if (document.body.contains(element)) {
+                    translatePage(element);
                 }
             }
         }
     });
 
-    // 開始監聽 body 的子節點和後代節點變化
+    // 開始監聽 body 的子節點、後代節點變化，並增加對屬性的監聽
     observer.observe(document.body, {
-        childList: true,
-        subtree: true
+        childList: true,  // 監聽子節點的新增或刪除
+        subtree: true,    // 監聽所有後代節點
+        attributes: true  // 關鍵：監聽屬性變化！
     });
 
-    console.log('MutationObserver is now watching for dynamic content.');
+    console.log('MutationObserver is now watching for dynamic content and attribute changes.');
 
 })();
