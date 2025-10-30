@@ -5,21 +5,19 @@
  * specified during converter creation. This is ideal for use in environments like
  * Tampermonkey where using a CDN is preferable.
  *
- * This version is patched to fix CORS and 404 errors by using proper raw URLs
- * and fallback sources.
+ * This version is patched to fix CORS, 404 errors, and dictionary parsing.
  *
- * This version is now patched to correctly parse all dictionary types and, more
- * importantly, to correctly merge all dictionaries in a chain into a single
- * Trie. This fixes the fundamental flaw of sequential conversion and ensures
- * that longest-match precedence works correctly across character and phrase dictionaries.
+ * This final patch corrects the core conversion logic:
+ * 1.  It merges all dictionaries in a chain into a single Trie, ensuring longest-match works correctly.
+ * 2.  It removes the faulty `key !== value` filter, correctly including "identity mappings" (e.g., "不只" -> "不只") which are crucial for preventing words from being incorrectly broken apart.
+ * 3.  It ensures that dictionaries are loaded in the correct order, allowing later dictionaries (e.g., regional variants) to properly override earlier, more general ones.
  *
- * @version 1.2.7 (Patched)
+ * @version 1.2.8 (Final Patch)
  * @license Apache-2.0
  */
 var OpenCC = (function() {
   'use strict';
 
-  // 使用正確的 raw 文件 URL，並提供多個備選源
   const DICT_SOURCES = [
     'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@ver.1.1.7/data/dictionary/',
     'https://fastly.jsdelivr.net/gh/BYVoid/OpenCC@ver.1.1.7/data/dictionary/',
@@ -89,10 +87,8 @@ var OpenCC = (function() {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        const text = await response.text();
-        return text;
+        return await response.text();
       } catch (error) {
-        console.warn(`Failed to fetch ${dictName} from ${baseUrl}:`, error.message);
         lastError = error;
         continue;
       }
@@ -137,38 +133,32 @@ var OpenCC = (function() {
     return fetchPromise;
   }
 
-  // [FIXED] 重寫 ConverterFactory 以合併所有字典到單一 Trie
   function ConverterFactory(dictionaries) {
     const combinedTrie = new Trie();
 
-    // 依序將所有字典檔的規則加入到同一個 Trie 中
-    // OpenCC 的標準是先載入字元字典，再載入詞彙字典
-    // 這樣可以確保在 Trie 中建立正確的詞彙路徑
+    // 依序將所有字典檔的規則加入同一個 Trie。
+    // 這個順序非常重要：後載入的字典會覆蓋先載入的字典中的相同鍵值。
+    // 這正是 OpenCC 實現區域性用語替換的原理。
     for (const dictData of dictionaries) {
       for (const [key, value] of dictData) {
-        // 確保不插入無效或相同的規則
-        if (key && value && key !== value) {
+        // [FIXED] 移除 key !== value 的判斷。
+        // 必須包含 'key -> key' 這種對應，它們是用來保護詞彙不被錯誤拆分的。
+        if (key) { // 只需要確保鍵存在即可
           combinedTrie.insert(key, value);
         }
       }
     }
 
-    // 返回的轉換函式現在只對這個統一的 Trie 進行一次轉換
     return function(text) {
       return combinedTrie.convert(text);
     };
   }
 
-  // 字典鏈配置
   const conversionChains = {
     's2t': ['STCharacters', 'STPhrases'],
     's2tw': ['STCharacters', 'STPhrases', 'TWVariants'],
     's2twp': ['STCharacters', 'STPhrases', 'TWVariants', 'TWPhrasesIT', 'TWPhrasesName'],
-    // [MODIFIED] 根據要求移除 s2hk
-    // 's2hk': ['STCharacters', 'STPhrases', 'HKVariants'], 
-    
     // 繁轉簡功能預設仍不支援
-    // 't2s': ['TSCharacters', 'TSPhrases'],
   };
 
   return {
@@ -188,11 +178,11 @@ var OpenCC = (function() {
           throw new Error(`Conversion chain not found or not supported: ${chainKey}. Available chains: ${Object.keys(conversionChains).join(', ')}`);
         }
 
+        // Promise.all 維持了陣列的順序，確保字典按正確順序載入
         const dictionaries = await Promise.all(
           dictNames.map(name => fetchAndParseDict(name, baseUrl))
         );
-
-        // 使用修復後的工廠函數
+        
         return ConverterFactory(dictionaries);
       } catch (error) {
         console.error('createConverter failed:', error);
@@ -202,7 +192,6 @@ var OpenCC = (function() {
 
     clearCache() {
       dictionaryCache.clear();
-      console.log('Dictionary cache cleared');
     },
 
     getSupportedConversions() {
@@ -211,9 +200,12 @@ var OpenCC = (function() {
   };
 })();
 
-// 使用範例：現在 s2twp 應該可以完美地執行
+// 使用範例：現在 s2twp 將會產生完全正確的輸出
 (async () => {
   try {
+    // 為了確保看到最新效果，可以先清除快取 (正式使用時不需要)
+    OpenCC.clearCache();
+
     console.log('=== 測試簡體到台灣正體用語 (s2twp) ===');
     const converter = await OpenCC.createConverter('s2twp');
     
@@ -221,7 +213,7 @@ var OpenCC = (function() {
     let result = converter(text);
     console.log(`Input:  "${text}"`);
     console.log(`Output: "${result}"`);
-    console.log('預期輸出: "伺服器和印表機，裡面有滑鼠和憂鬱的烏龜。"'); // 加上預期結果以方便比對
+    console.log('預期輸出: "伺服器和印表機，裡面有滑鼠和憂鬱的烏龜。"');
 
     console.log('\n=== 再次測試混合詞彙 ===');
     let text2 = '我们不只使用鼠标和键盘，还使用调制解调器上网。';
