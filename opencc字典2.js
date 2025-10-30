@@ -1,234 +1,299 @@
 // ==UserScript==
-// @name         網頁簡轉繁 (OpenCC) - 最終合併版
-// @namespace    http://tampermonkey.net/
+// @name         網頁簡轉繁 (OpenCC) - 最終合併版 v2.0
+// @namespace    https://github.com/seyhn/opencc-web-extension
 // @version      2.0
-// @description  使用 OpenCC 將網頁從簡體轉換為繁體。此版本已內置轉換引擎，無需外部依賴，並修復了異體字轉換問題。
-// @author       Your Name (Modified from OpenCC-JS)
-// @match        *://*/*
-// @exclude      *://*.google.com/*
-// @exclude      *://*.bing.com/*
-// @exclude      *://*.facebook.com/*
-// @exclude      *://*.youtube.com/*
-// @exclude      *://*.github.com/*
-// @grant        GM_xmlhttpRequest
+// @description  基於 OpenCC 實現的網頁繁簡轉換，自動處理動態載入內容。修復了原版字典 404 問題，並增加 CDN 備援與快取機制。
+// @author       AI-Enhanced & Community
+// @match        http://*/*
+// @match        https://*/*
+// @exclude      /^https?:\/\/www.google\.com\/.*?/
+// @exclude      /^https?:\/\/docs.google\.com\/.*?/
+// @exclude      /^https?:\/\/drive.google\.com\/.*?/
+// @exclude      /^https?:\/\/github\.com\/.*?/
+// @exclude      /^https://vscode.dev/.*?/
+// @exclude      /^https?:\/\/codepen\.io\/.*?/
 // @connect      cdn.jsdelivr.net
-// @run-at       document-idle
+// @connect      fastly.jsdelivr.net
+// @connect      cdn.statically.io
+// @connect      raw.githubusercontent.com
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
+// @grant        GM_registerMenuCommand
+// @license      MIT
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    /******************************************************************************
-     *  內置 OpenCC 轉換引擎 (版本 1.2.0, 可配置)
-     ******************************************************************************/
-    const OpenCC = (function() {
-        const DEFAULT_DICT_BASE_URL = 'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@master/data/dictionary/';
-        const dictionaryCache = new Map();
+    // --- 配置區 ---
+    const CONFIG = {
+        // 字典檔案的 CDN 來源，會依序嘗試
+        dictBaseUrls: [
+            'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@v1.1.7/data/dictionary/',
+            'https://fastly.jsdelivr.net/gh/BYVoid/OpenCC@v1.1.7/data/dictionary/',
+            'https://cdn.statically.io/gh/BYVoid/OpenCC/v1.1.7/data/dictionary/',
+            'https://raw.githubusercontent.com/BYVoid/OpenCC/v1.1.7/data/dictionary/', // 最終備援
+        ],
+        // 可用的轉換模式及其所需的字典
+        conversionChains: {
+            's2t':   { name: '簡體到繁體', dicts: ['STPhrases', 'STCharacters'] },
+            't2s':   { name: '繁體到簡體', dicts: ['TSPhrases', 'TSCharacters'] },
+            's2tw':  { name: '簡體到臺灣正體', dicts: ['STPhrases', 'STCharacters', 'TWVariants'] },
+            'tw2s':  { name: '臺灣正體到簡體', dicts: ['TWVariantsRev', 'TSPhrases', 'TSCharacters'] },
+            's2hk':  { name: '簡體到香港繁體', dicts: ['STPhrases', 'STCharacters', 'HKVariants'] },
+            'hk2s':  { name: '香港繁體到簡體', dicts: ['HKVariantsRev', 'TSPhrases', 'TSCharacters'] },
+            's2twp': { name: '簡體到臺灣正體(含地區詞)', dicts: ['STPhrases', 'STCharacters', 'TWPhrasesIT', 'TWPhrasesName', 'TWVariants'] },
+            'tw2sp': { name: '臺灣正體(含地區詞)到簡體', dicts: ['TWVariantsRev', 'TWPhrasesITRev', 'TWPhrasesNameRev', 'TSPhrases', 'TSCharacters']}
+        },
+        // 預設轉換模式
+        defaultConversion: 's2twp',
+        // 腳本是否預設啟用
+        defaultEnabled: true,
+        // 儲存設定的鍵值
+        storageKeys: {
+            config: 'opencc_config',
+            dictCache: 'opencc_dict_cache_'
+        },
+        // MutationObserver 的延遲執行時間 (毫秒)，防止頻繁觸發
+        debounceTime: 300,
+    };
 
-        function Trie() { this.root = {}; }
-        Trie.prototype.insert = function(word, value) {
-            let node = this.root;
-            for (const char of word) {
-                if (!node[char]) { node[char] = {}; }
-                node = node[char];
-            }
-            node.value = value;
-            node.wordEnd = true;
-        };
-        Trie.prototype.convert = function(text) {
-            let result = '';
-            let i = 0;
-            while (i < text.length) {
-                let node = this.root;
-                let j = i;
-                let lastMatch = null;
-                while (j < text.length && node[text[j]]) {
-                    node = node[text[j]];
-                    if (node.wordEnd) { lastMatch = { end: j, value: node.value }; }
-                    j++;
-                }
-                if (lastMatch) {
-                    result += lastMatch.value;
-                    i = lastMatch.end + 1;
-                } else {
-                    result += text[i];
-                    i++;
-                }
-            }
-            return result;
-        };
+    // --- 內部狀態 ---
+    let state = {
+        converter: null,
+        isConverting: false,
+        observer: null,
+        processedNodes: new WeakSet(),
+        convertTimeout: null,
+        userConfig: {},
+    };
 
-        async function fetchAndParseDict(dictName, baseUrl) {
-            const cacheKey = `${baseUrl}:${dictName}`;
-            if (dictionaryCache.has(cacheKey)) { return await dictionaryCache.get(cacheKey); }
-            const fetchPromise = (async () => {
-                const url = `${baseUrl}${dictName}.txt`;
+    // --- OpenCC 核心引擎 ---
+    const OpenCC = {
+        async createConverter(chain) {
+            console.log(`[OpenCC] 開始建立轉換器: ${chain.name}`);
+            const dicts = await this.loadDictionaries(chain.dicts);
+            const conversionMap = this.buildConversionMap(dicts);
+            console.log(`[OpenCC] 轉換器建立成功，載入 ${conversionMap.size} 個詞條。`);
+            return (text) => this.convert(text, conversionMap);
+        },
+
+        async loadDictionaries(dictNames) {
+            const dictPromises = dictNames.map(name => this.fetchDictionaryWithCache(name));
+            return Promise.all(dictPromises);
+        },
+
+        async fetchDictionaryWithCache(name) {
+            const cacheKey = CONFIG.storageKeys.dictCache + name;
+            const cachedDict = await GM_getValue(cacheKey);
+            if (cachedDict) {
+                // console.log(`[OpenCC] 從快取載入字典: ${name}`);
+                return cachedDict;
+            }
+
+            console.log(`[OpenCC] 開始從網路載入字典: ${name}`);
+            for (const baseUrl of CONFIG.dictBaseUrls) {
                 try {
-                    const response = await new Promise((resolve, reject) => {
-                        GM_xmlhttpRequest({
-                            method: "GET",
-                            url: url,
-                            onload: resolve,
-                            onerror: reject,
-                            ontimeout: reject
-                        });
-                    });
-                    if (response.status < 200 || response.status >= 300) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                    const url = baseUrl + name + '.txt';
+                    const response = await this.httpRequest(url);
+                    if (response.status === 200) {
+                        console.log(`[OpenCC] 成功從 ${baseUrl} 取得字典: ${name}`);
+                        const textData = response.responseText;
+                        await GM_setValue(cacheKey, textData);
+                        return textData;
                     }
-                    const text = response.responseText;
-                    const lines = text.split('\n');
-                    const dictData = [];
-                    for (const line of lines) {
-                        if (line.trim() === '' || line.startsWith('#')) continue;
-                        const parts = line.split('\t');
-                        if (parts.length >= 2) {
-                            dictData.push([parts[0], parts[1].split(' ')[0]]);
-                        }
-                    }
-                    return dictData;
                 } catch (error) {
-                    console.error(`無法獲取字典 ${dictName} 從 ${url}:`, error);
-                    dictionaryCache.delete(cacheKey);
-                    throw error;
+                    console.warn(`[OpenCC] 從 ${baseUrl} 載入 ${name} 失敗:`, error.message);
                 }
-            })();
-            dictionaryCache.set(cacheKey, fetchPromise);
-            return fetchPromise;
-        }
-
-        function ConverterFactory(dictionaries) {
-            const tries = dictionaries.map(dictData => {
-                const trie = new Trie();
-                for (const [key, value] of dictData) { trie.insert(key, value); }
-                return trie;
-            });
-            return function(text) {
-                return tries.reduce((currentText, trie) => trie.convert(currentText), text);
-            };
-        }
-
-        const conversionChains = {
-            's2t': ['STPhrases', 'STCharacters'],
-            't2s': ['TSPhrases', 'TSCharacters'],
-            's2tw': ['STPhrases', 'STCharacters', 'TWVariants'],
-            'tw2s': ['TWVariantsRev', 'TSPhrases', 'TSCharacters'],
-            's2twp': ['STPhrases', 'STCharacters', 'TWPhrases', 'TWVariants'],
-            'tw2sp': ['TWVariantsRev', 'TWPhrasesRev', 'TSPhrases', 'TSCharacters'],
-            's2hk': ['STPhrases', 'STCharacters', 'HKVariants'],
-            'hk2s': ['HKVariantsRev', 'TSPhrases', 'TSCharacters'],
-        };
-
-        return {
-            async createConverter(options) {
-                const chainKey = `${options.from}2${options.to}`;
-                const dictNames = conversionChains[chainKey];
-                if (!dictNames) {
-                    throw new Error(`未找到轉換鏈: from '${options.from}' to '${options.to}'`);
-                }
-                const baseUrl = options.dictPath || DEFAULT_DICT_BASE_URL;
-                console.log(`[OpenCC] 開始從 ${baseUrl} 載入字典: ${dictNames.join(', ')}`);
-                const dictionaries = await Promise.all(dictNames.map(name => fetchAndParseDict(name, baseUrl)));
-                return ConverterFactory(dictionaries);
             }
-        };
-    })();
+            throw new Error(`無法獲取字典 ${name} 從所有來源。`);
+        },
+
+        httpRequest(url) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    onload: resolve,
+                    onerror: reject,
+                    ontimeout: reject
+                });
+            });
+        },
+
+        buildConversionMap(dicts) {
+            const conversionMap = new Map();
+            dicts.forEach(dictText => {
+                const lines = dictText.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('#') || line.trim() === '') continue;
+                    const parts = line.split('\t');
+                    if (parts.length < 2) continue;
+                    const [key, value] = parts;
+                    // 後載入的字典會覆蓋先載入的
+                    conversionMap.set(key, value.split(' ')[0]); // 只取第一個候選詞
+                }
+            });
+            return conversionMap;
+        },
+
+        convert(text, conversionMap) {
+            let convertedText = '';
+            for (let i = 0; i < text.length; ++i) {
+                // 簡易的最大正向匹配
+                let matched = false;
+                for (let len = Math.min(10, text.length - i); len > 0; --len) {
+                    const segment = text.substr(i, len);
+                    if (conversionMap.has(segment)) {
+                        convertedText += conversionMap.get(segment);
+                        i += len - 1;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    convertedText += text[i];
+                }
+            }
+            return convertedText;
+        }
+    };
 
 
-    /******************************************************************************
-     *  您的腳本主邏輯
-     ******************************************************************************/
-    (async function() {
+    // --- DOM 處理 ---
+    function convertPage() {
+        if (!state.converter || state.isConverting) return;
+        state.isConverting = true;
+
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) => {
+                // 忽略已處理、不可見、或在特定標籤內的節點
+                if (state.processedNodes.has(node) || !node.nodeValue.trim()) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                const parent = node.parentNode;
+                if (parent && (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE' || parent.tagName === 'TEXTAREA' || parent.isContentEditable)) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+
+        const nodesToConvert = [];
+        let currentNode;
+        while ((currentNode = walker.nextNode())) {
+            nodesToConvert.push(currentNode);
+        }
+
+        if (nodesToConvert.length > 0) {
+            // console.log(`[OpenCC] 發現 ${nodesToConvert.length} 個新文字節點需要轉換。`);
+            nodesToConvert.forEach(node => {
+                node.nodeValue = state.converter(node.nodeValue);
+                state.processedNodes.add(node);
+            });
+        }
+        state.isConverting = false;
+    }
+
+    function startObserver() {
+        if (state.observer) state.observer.disconnect();
+
+        state.observer = new MutationObserver(mutations => {
+            clearTimeout(state.convertTimeout);
+            state.convertTimeout = setTimeout(() => {
+                // 檢查是否有節點新增
+                const hasAddedNodes = mutations.some(m => m.addedNodes.length > 0);
+                if (hasAddedNodes) {
+                    // console.log('[OpenCC] 偵測到網頁內容變動，準備進行增量轉換...');
+                    convertPage();
+                }
+            }, CONFIG.debounceTime);
+        });
+
+        state.observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        console.log('[OpenCC] MutationObserver 已啟動，將自動轉換動態內容。');
+    }
+
+    // --- 初始化與控制 ---
+    async function init() {
+        if (!state.userConfig.enabled) {
+            console.log('[OpenCC 簡轉繁] 腳本已停用。');
+            return;
+        }
         console.log('[OpenCC 簡轉繁] 腳本啟動...');
 
-        const DICT_BASE_URL = 'https://cdn.jsdelivr.net/gh/BYVoid/OpenCC@master/data/dictionary/';
-        const CONVERTER_OPTIONS = {
-            from: 's',
-            to: 'twp', // s2twp: 簡體 -> 台灣繁體 (含地區詞彙)
-            dictPath: DICT_BASE_URL
-        };
-
-        let converter;
         try {
-            converter = await OpenCC.createConverter(CONVERTER_OPTIONS);
-            console.log('[OpenCC 簡轉繁] 轉換器建立成功！');
+            const chain = CONFIG.conversionChains[state.userConfig.conversion || CONFIG.defaultConversion];
+            state.converter = await OpenCC.createConverter(chain);
+            convertPage();
+            startObserver();
         } catch (error) {
             console.error('[OpenCC 簡轉繁] 建立轉換器失敗，腳本將停止運作。錯誤原因:', error);
-            return; // 如果轉換器建立失敗，直接退出
+        }
+    }
+
+    async function loadConfig() {
+        const savedConfig = await GM_getValue(CONFIG.storageKeys.config, {});
+        state.userConfig = {
+            enabled: savedConfig.enabled ?? CONFIG.defaultEnabled,
+            conversion: savedConfig.conversion ?? CONFIG.defaultConversion,
+        };
+    }
+
+    async function saveConfig() {
+        await GM_setValue(CONFIG.storageKeys.config, state.userConfig);
+    }
+
+    function registerMenu() {
+        const enabledText = () => state.userConfig.enabled ? '✅ 停用自動轉換' : '☑️ 啟用自動轉換';
+        const currentModeText = () => `🔄 切換模式 (當前: ${CONFIG.conversionChains[state.userConfig.conversion].name})`;
+
+        // 刷新選單的函數
+        const refreshMenu = () => {
+            GM_registerMenuCommand(enabledText(), toggleEnable);
+            GM_registerMenuCommand('手动執行一次轉換', () => { if (state.converter) convertPage(); });
+            GM_registerMenuCommand(currentModeText(), switchConversion);
+        }
+        
+        let menuIds = [];
+        // 重新註冊所有選單
+        const updateMenu = () => {
+            menuIds.forEach(id => GM_unregisterMenuCommand(id));
+            menuIds = [];
+            menuIds.push(GM_registerMenuCommand(enabledText(), toggleEnable, 'E'));
+            menuIds.push(GM_registerMenuCommand('手动執行一次轉換', () => { if (state.converter) convertPage(); }, 'M'));
+            menuIds.push(GM_registerMenuCommand(currentModeText(), switchConversion,'S'));
         }
 
-        const convertedNodes = new WeakSet();
+        const toggleEnable = async () => {
+            state.userConfig.enabled = !state.userConfig.enabled;
+            await saveConfig();
+            alert(`OpenCC 自動轉換已 ${state.userConfig.enabled ? '啟用' : '停用'}，重新整理頁面生效。`);
+            updateMenu();
+        };
 
-        function convertText(text) {
-            if (!text || !converter) return text;
-            return converter(text);
-        }
+        const switchConversion = async () => {
+            const modes = Object.keys(CONFIG.conversionChains);
+            const currentIndex = modes.indexOf(state.userConfig.conversion);
+            const nextIndex = (currentIndex + 1) % modes.length;
+            state.userConfig.conversion = modes[nextIndex];
+            await saveConfig();
+            alert(`轉換模式已切換為: ${CONFIG.conversionChains[state.userConfig.conversion].name}，重新整理頁面生效。`);
+            updateMenu();
+        };
 
-        function convertNode(node) {
-            if (!node || convertedNodes.has(node)) {
-                return;
-            }
-
-            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null, false);
-            let textNode;
-            const nodesToConvert = [];
-            while (textNode = walker.nextNode()) {
-                const parent = textNode.parentElement;
-                if (parent && parent.tagName !== 'SCRIPT' && parent.tagName !== 'STYLE' && parent.tagName !== 'TEXTAREA' && !parent.isContentEditable) {
-                    if (textNode.nodeValue.trim() !== '') {
-                        nodesToConvert.push(textNode);
-                    }
-                }
-            }
-
-            for (const n of nodesToConvert) {
-                if (convertedNodes.has(n)) continue;
-                // 偵測是否有簡體字，避免不必要的轉換
-                if (/[一-龥]/.test(n.nodeValue)) { // 簡單檢測，可以優化
-                    const originalText = n.nodeValue;
-                    const convertedText = convertText(originalText);
-                    if (originalText !== convertedText) {
-                        n.nodeValue = convertedText;
-                    }
-                }
-                convertedNodes.add(n);
-            }
-            convertedNodes.add(node);
-        }
-
-        // 監控 DOM 變化，處理動態載入的內容
-        const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                if (mutation.type === 'childList') {
-                    for (const node of mutation.addedNodes) {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            convertNode(node);
-                        } else if (node.nodeType === Node.TEXT_NODE) {
-                            convertNode(node.parentElement);
-                        }
-                    }
-                } else if (mutation.type === 'attributes') {
-                     // 處理 NGA 這類透過改變 style 來顯示的隱藏內容
-                    if (mutation.target.nodeType === Node.ELEMENT_NODE) {
-                         // 避免重複轉換已經處理過的元素
-                         if(!convertedNodes.has(mutation.target)){
-                              convertNode(mutation.target);
-                         }
-                    }
-                }
-            }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style', 'class'] // 監控 style 和 class 的變化
-        });
-
-        // 初始執行一次
-        convertNode(document.body);
-        console.log('[OpenCC 簡轉繁] 頁面初始轉換完成，並已啟動監控。');
-
+        updateMenu();
+    }
+    
+    // --- 腳本主入口 ---
+    (async function main() {
+        await loadConfig();
+        registerMenu();
+        init();
     })();
+
 })();
