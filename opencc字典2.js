@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         OpenCC-JS s2twp Auto-translate (Tampermonkey) - No UI
+// @name         OpenCC-JS s2twp Auto-translate (Tampermonkey) - No UI (fixed)
 // @namespace    http://tampermonkey.net/
-// @version      1.2
-// @description  Auto-convert Simplified Chinese on pages to Traditional Taiwanese (s2twp) using OpenCC dictionaries and GM_xmlhttpRequest. Exposes window.OpenCC. UI toggle removed.
+// @version      1.3
+// @description  Auto-convert Simplified Chinese on pages to Traditional Taiwanese (s2twp) using OpenCC dictionaries and GM_xmlhttpRequest. Exposes window.OpenCC. UI toggle removed. Bugfix: avoid repeated self-triggered mutations and duplicate processing.
 // @author       Converted
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
@@ -221,23 +221,61 @@
   // Throttle batch processing to avoid UI freeze
   let pendingNodes = [];
   let processing = false;
+  const scheduledSet = new WeakSet(); // avoid duplicate nodes in pendingNodes
+  let mo = null; // MutationObserver (hoisted so scheduleProcess can disconnect/reconnect)
+
   function scheduleProcess(nodes) {
-    pendingNodes = pendingNodes.concat(nodes);
+    if (!nodes || !nodes.length) return;
+    // add only nodes not already scheduled and still relevant
+    for (const n of nodes) {
+      if (!n || n.nodeType !== Node.TEXT_NODE) continue;
+      if (!n.nodeValue || !n.nodeValue.trim()) continue;
+      if (!n.isConnected) continue;
+      if (shouldSkipNode(n)) continue;
+      if (scheduledSet.has(n)) continue;
+      scheduledSet.add(n);
+      pendingNodes.push(n);
+    }
+
     if (processing) return;
     processing = true;
+
     setTimeout(async () => {
+      // disconnect observer to avoid reacting to our own modifications
+      try {
+        if (mo) mo.disconnect();
+      } catch (e) { /* ignore */ }
+
       try {
         if (!converter) return;
+        // take current batch
         const batch = pendingNodes.splice(0, pendingNodes.length);
+        // clear scheduledSet entries for these nodes
+        for (const n of batch) {
+          try { scheduledSet.delete(n); } catch (e) { /* ignore */ }
+        }
+
         for (const tn of batch) {
           try {
+            if (!tn || tn.nodeType !== Node.TEXT_NODE) continue;
+            if (!tn.isConnected) continue; // skip removed nodes
             const original = tn.nodeValue;
+            if (!original || !original.trim()) continue;
             const converted = converter(original);
-            if (converted !== original) tn.nodeValue = converted;
+            // only set when actually different and safe
+            if (converted !== undefined && converted !== null && converted !== original) {
+              // minimal check: avoid infinite loop by ensuring converted is a string
+              if (typeof converted === 'string') tn.nodeValue = converted;
+            }
           } catch (e) { /* ignore per-node errors */ }
         }
       } finally {
         processing = false;
+        // reconnect observer
+        try {
+          if (mo) mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+        } catch (e) { /* ignore */ }
+        // if new nodes arrived while processing, schedule another run
         if (pendingNodes.length) scheduleProcess([]);
       }
     }, 100);
@@ -254,7 +292,7 @@
       scheduleProcess(initial);
 
       // observe dynamic changes
-      const mo = new MutationObserver(mutations => {
+      mo = new MutationObserver(mutations => {
         const nodes = [];
         for (const m of mutations) {
           if (m.type === 'characterData' && m.target && m.target.nodeType === Node.TEXT_NODE) {
