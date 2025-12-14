@@ -398,3 +398,6 @@ HAPPY,udp://@224.1.4.186:11111/
 驚豔成人電影台,udp://@224.1.4.204:11111
 香蕉台,udp://@224.1.4.205:11111
 JStar極限台電影頻道,udp://@230.1.2.152:11111
+年代新聞,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-online/era-news
+東森新聞,http://3065.koyeb.app/3065.php?id=4gtv-4gtv152
+東森財經,http://3065.koyeb.app/3065.php?id=4gtv-4gtv153
