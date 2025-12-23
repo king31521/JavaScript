@@ -399,6 +399,5 @@ HAPPY,udp://@224.1.4.186:11111/
 香蕉台,udp://@224.1.4.205:11111
 JStar極限台電影頻道,udp://@230.1.2.152:11111
 年代新闻,https://smt.go-iptv.ggff.net/smart.php?id=niandainews_twn&token=Goiptv
-年代新聞,https://www.kds.tw/tv/china-tv-channels-online/taiwan-tv-channels-online/era-news
 東森新聞台,https://smt.go-iptv.ggff.net/smart.php?id=ettvnews&token=Goiptv
 東森財經,https://smt.go-iptv.ggff.net/smart.php?id=ettvcaijing_twn&token=Goiptv
