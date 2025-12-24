@@ -398,6 +398,6 @@ HAPPY,udp://@224.1.4.186:11111/
 驚豔成人電影台,udp://@224.1.4.204:11111
 香蕉台,udp://@224.1.4.205:11111
 JStar極限台電影頻道,udp://@230.1.2.152:11111
-年代新闻,https://smt.go-iptv.ggff.net/smart.php?id=niandainews_twn&token=Goiptv
-東森新聞台,https://smt.go-iptv.ggff.net/smart.php?id=ettvnews&token=Goiptv
-東森財經,https://smt.go-iptv.ggff.net/smart.php?id=ettvcaijing_twn&token=Goiptv
+年代新闻,https://1234.koyeb.app/smart.php?id=niandainews_twn&token=1234
+東森新聞台,https://tzh911.qzz.io/litv.php?id=4gtv-4gtv152
+東森財經台,https://tzh911.qzz.io/litv.php?id=4gtv-4gtv153
