@@ -398,15 +398,6 @@ HAPPY,udp://@224.1.4.186:11111/
 驚豔成人電影台,udp://@224.1.4.204:11111
 香蕉台,udp://@224.1.4.205:11111
 JStar極限台電影頻道,udp://@230.1.2.152:11111
-年代新聞,https://stream1.freetv.fun/nian-dai-xin-wen-6.m3u8
-年代新聞[geo-blocked],https://stream1.freetv.fun/nian-dai-xin-wen-1.m3u8
+年代新聞,https://live.catvod.com/live.php?id=niandainews_twn
 東森新聞,http://integral-prisca-ef399aa6.koyeb.app/5678.php?id=4gtv-4gtv152
-東森新聞,https://stream1.freetv.fun/dong-sen-xin-wen-16.m3u8
-東森新聞,https://stream1.freetv.fun/dong-sen-xin-wen-17.m3u8
-東森新聞,https://stream1.freetv.fun/dong-sen-xin-wen-10.m3u8
-東森新聞,https://stream1.freetv.fun/dong-sen-xin-wen-12.m3u8
 東森財經,http://integral-prisca-ef399aa6.koyeb.app/5678.php?id=4gtv-4gtv153
-東森財經,https://stream1.freetv.fun/dong-sen-cai-jing-xin-wen-13.m3u8
-東森財經,https://stream1.freetv.fun/dong-sen-cai-jing-xin-wen-3.m3u8
-東森財經,https://stream1.freetv.fun/dong-sen-cai-jing-xin-wen-4.m3u8
-東森財經,https://stream1.freetv.fun/dong-sen-cai-jing-xin-wen-9.m3u8
