@@ -398,6 +398,6 @@ HAPPY,udp://@224.1.4.186:11111/
 驚豔成人電影台,udp://@224.1.4.204:11111
 香蕉台,udp://@224.1.4.205:11111
 JStar極限台電影頻道,udp://@230.1.2.152:11111
-年代新聞,https://live.catvod.com/live.php?id=niandainews_twn
+年代新聞,https://live.catvod.com/live.php?id=niandainews_twn&token=623957bacbaf9b175d310d935e9db92b4861c7ed73bd7a08bb6a39baea1c153e%3A1763015025%3ANTkuMTE1LjE5Ni4xMTI%3D
 東森新聞,http://integral-prisca-ef399aa6.koyeb.app/5678.php?id=4gtv-4gtv152
 東森財經,http://integral-prisca-ef399aa6.koyeb.app/5678.php?id=4gtv-4gtv153
