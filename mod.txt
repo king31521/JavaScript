@@ -400,9 +400,9 @@ HAPPY,udp://@224.1.4.186:11111/
 JStar極限台電影頻道,udp://@230.1.2.152:11111
 年代新聞,http://iptvpro.pw:35451/live/加QQ群1077202079/7412fh356/165.ts
 年代新聞,http://iptvpro.pw:35451/live/加QQ群1077202079/7412fh356/406.ts
-東森新聞,https://www.4gtv.tv/channel/4gtv-4gtv152?set=1&ch=292
-東森財經,https://www.4gtv.tv/channel/4gtv-4gtv153?set=1&ch=293
-民視新聞台,https://www.4gtv.tv/channel/litv-ftv13?set=1&ch=31
-中天新聞台,https://www.4gtv.tv/channel/4gtv-4gtv009?set=1&ch=30
-華視新聞台,https://www.4gtv.tv/channel/4gtv-4gtv052?set=1&ch=34
-中視新聞台,https://www.4gtv.tv/channel/4gtv-4gtv074?set=1&ch=33
+東森新聞台,webview://https://www.4gtv.tv/channel/4gtv-4gtv152?set=1&ch=292
+東森財經台,webview://https://www.4gtv.tv/channel/4gtv-4gtv153?set=1&ch=293
+民視新聞台,webview://https://www.4gtv.tv/channel/litv-ftv13?set=1&ch=31
+中天新聞台,webview://https://www.4gtv.tv/channel/4gtv-4gtv009?set=1&ch=30
+華視新聞台,webview://https://www.4gtv.tv/channel/4gtv-4gtv052?set=1&ch=34
+中視新聞台,webview://https://www.4gtv.tv/channel/4gtv-4gtv074?set=1&ch=33
