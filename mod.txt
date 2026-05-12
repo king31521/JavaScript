@@ -402,11 +402,17 @@ henati,http://u.vipl.one/high/ierw63qgf1/1693.m3u8
 東森幼幼台,https://cdn-2.ttvb.eu.org/api/YoYo-TV/index.m3u8
 年代新聞,https://cdn-2.ttvb.eu.org/api/Era-News/index.m3u8
 年代新聞,https://iptv.707626.xyz/ch/f92bee3f634772070bc7e3b4b6e5909b/master.m3u8
+年代新聞,https://t.freetv.fun/live/nian-dai-xin-wen.m3u8
+年代新聞,https://t.freetv.fun/live/nian-dai-xin-wen-z.m3u8
 年代新聞,https://hls.iill.top/api/Era-News/index.m3u8
 年代新聞,https://tv.iill.top/api/Era-News/index.m3u8
 年代新聞,https://v.iill.top/api/Era-News/index.m3u8
 東森新聞台,https://iptv.707626.xyz/ch/276d9d7351320ebaf09bcd53b121a2b0/master.m3u8
 東森新聞台,https://cgcwsuulbdid.ap-northeast-1.clawcloudrun.com/4gtv-4gtv152/index.m3u8?token=123
+東森新聞台,https://t.freetv.fun/live/dong-sen-xin-wen.ts
+東森新聞台,https://t.freetv.fun/live/dong-sen-xin-wen-ee.php
+東森新聞台,https://t.freetv.fun/live/dong-sen-xin-wen-1.m3u8
+東森新聞台,https://t.freetv.fun/live/dong-sen-xin-wen-z.m3u8
 東森新聞台,https://tv.iill.top/4gtv/4gtv-4gtv152
 東森新聞台,https://v.iill.top/4gtv/4gtv-4gtv152/index.m3u8
 東森新聞台,https://cdn-2.ttvb.eu.org/4gtv/4gtv-4gtv152/index.m3u8
