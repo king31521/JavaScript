@@ -400,15 +400,15 @@ HAPPY,udp://@224.1.4.186:11111/
 JStar極限台電影頻道,udp://@230.1.2.152:11111
 henati,http://u.vipl.one/high/ierw63qgf1/1693.m3u8
 東森幼幼台,https://cdn-2.ttvb.eu.org/api/YoYo-TV/index.m3u8
+年代新聞,p2p://142.54.189.229:2666/64df11830008ea4904a2921502394fe8.ts
 年代新聞,https://cdn-2.ttvb.eu.org/api/Era-News/index.m3u8
 年代新聞,https://iptv.707626.xyz/ch/f92bee3f634772070bc7e3b4b6e5909b/master.m3u8
-年代新聞,p3p://167.114.175.6:55331/5fe09fec000ac0127462c4ac6b1f16a3
 年代新聞,https://hls.iill.top/api/Era-News/index.m3u8
 年代新聞,https://tv.iill.top/api/Era-News/index.m3u8
 年代新聞,https://v.iill.top/api/Era-News/index.m3u8
+東森新聞台,p2p://142.54.189.229:2666/64df0db3000d67790493aeaf65c56300.ts
 東森新聞台,https://iptv.707626.xyz/ch/276d9d7351320ebaf09bcd53b121a2b0/master.m3u8
 東森新聞台,https://cgcwsuulbdid.ap-northeast-1.clawcloudrun.com/4gtv-4gtv152/index.m3u8?token=123
-東森新聞台,p3p://167.114.175.6:55331/61468afa0005b339ea7014d376a616f3
 東森新聞台,https://tv.iill.top/4gtv/4gtv-4gtv152
 東森新聞台,https://v.iill.top/4gtv/4gtv-4gtv152/index.m3u8
 東森新聞台,https://cdn-2.ttvb.eu.org/4gtv/4gtv-4gtv152/index.m3u8
