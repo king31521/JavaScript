@@ -403,6 +403,10 @@ HAPPY,udp://@224.1.4.186:11111/
 香蕉台,udp://@224.1.4.205:11111
 JStar極限台電影頻道,udp://@230.1.2.152:11111
 henati,http://u.vipl.one/high/ierw63qgf1/1693.m3u8
+奧視2,http://125.227.210.55:3031/VideoInput/play.ts
+奧視2,http://125.227.210.55:1022/VideoInput/play.ts
+奧視2,https://z3.ubtvfans.com/live/rx5/2916/e6fef1f52b41a9f7c8661ce1a3ac95b8/index.m3u8
+奧視3,http://125.227.210.55:3033/VideoInput/play.ts
 東森幼幼台,https://cdn.19891230.eu.org/api/YoYo-TV/index.m3u8
 年代新聞,https://cdn.19891230.eu.org/api/Era-News/index.m3u8
 年代新聞,https://cdn-2.ttvb.eu.org/api/Era-News/index.m3u8
