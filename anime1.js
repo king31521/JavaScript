@@ -14,6 +14,17 @@
       "filterable": 1,
       "changeable": 1
     }
+    {
+      "key": "csp_Hanime1",
+      "name": "櫻花┃Hanime1",
+      "type": 3,
+      "api": "csp_Hanime1",
+      "ext": "https://hanime1.me",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "changeable": 1
+      }
   ],
   "lives": [
     {
