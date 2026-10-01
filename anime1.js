@@ -5,7 +5,7 @@
   "sites": [
     {
       "key": "csp_Anime1",
-      "name": "櫻花┃Anime1動畫線上看",
+      "name": "Anime1動畫線上看",
       "type": 3,
       "api": "csp_Anime1",
       "searchable": 1,
@@ -17,7 +17,11 @@
       "name": "Hanime1",
       "type": 3,
       "api": "csp_Hanime1",
-      "ext": "https://raw.githubusercontent.com/Yswag/xptv-extensions/main/js/hanime.js"
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "changeable": 1,
+      "ext": "https://cdn.jsdelivr.net/gh/king31521/JavaScript/refs/heads/main/hanime1.js"
       }
   ],
   "lives": [
