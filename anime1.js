@@ -1,7 +1,7 @@
 {
   "spider": "https://raw.giteeusercontent.com/KYSY1/dyy/raw/master/bh0822.jar;https://xiuxiu-pro-new.meitudata.com/posters/2b32255aa9e7a9fd1913c1d0019e2be4.jpg;md5;2cc088afa757ba8bafffcfbab4b73ccc",
   "wallpaper": "https://pictures.catvod.eu.org/",
-  "danmaku": "https://cdn.jsdelivr.net/gh/goodcommunication/mydm@main/dm.json",
+  "danmaku": "https://danmu-api-two-pi.vercel.app/87654321/danmaku",
   "sites": [
     {
       "key": "csp_Anime1",
@@ -12,7 +12,7 @@
       "quickSearch": 1,
       "filterable": 1,
       "changeable": 1
-    }
+    },
     {
       "name": "Hanime1",
       "type": 3,
@@ -24,6 +24,21 @@
       "ext": "https://cdn.jsdelivr.net/gh/king31521/JavaScript@refs/heads/main/hanime1.js"
       }
   ],
+  {
+            "key": "双星99",
+            "name": "双星┃零十",
+            "type": 3,
+            "api": "csp_App99",
+            "ext": {
+                "host": "http://103.217.190.91:19987/app/bn",
+                "appkey": "24d625a8a29b4700a1a294c6f3b29e2c",
+                "versionName": "3.5.8",
+                "name": "半日闲",
+                "package": "com.yf.lelian",
+                "buildNumber": "2001",
+                "buildSignature": "A40DA80A59D170CAA950CF15C18C454D47A39B26989D8B640ECD745BA71BF5DC"
+            }
+        },
   "lives": [
     {
       "name": "LIVE",
@@ -31,7 +46,7 @@
       "url": "https://cdn.jsdelivr.net/gh/king31521/JavaScript@refs/heads/main/mod.txt",
       "playerType": 2
     }
-  ]
+  ],
   "regex": [
                 "更多",
                 "社 區",
