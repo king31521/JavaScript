@@ -8,7 +8,6 @@
       "name": "櫻花┃Anime1動畫線上看",
       "type": 3,
       "api": "csp_Anime1",
-      "ext": "https://anime1.me",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 1,
