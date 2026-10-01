@@ -39,6 +39,15 @@
                 "buildSignature": "A40DA80A59D170CAA950CF15C18C454D47A39B26989D8B640ECD745BA71BF5DC"
             }
         },
+    {
+            "key": "安", 
+            "name": "💖分享安博", 
+            "type": 4, 
+            "api": "https://tang.serv00.net/power/ub1818", 
+            "searchable": 1, 
+            "quickSearch": 1, 
+            "filterable": 0
+        },
   "lives": [
     {
       "name": "LIVE",
