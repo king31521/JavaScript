@@ -1,28 +1,20 @@
 {
-  "spider": "https://gitee.com/KYSY1/dyy/raw/master/bh0822.jar;https://xiuxiu-pro-new.meitudata.com/posters/2b32255aa9e7a9fd1913c1d0019e2be4.jpg;md5;2cc088afa757ba8bafffcfbab4b73ccc",
+  "spider": "https://ncstatic-file.clewm.net/rsrc/2026/0820/00/6f1e49c30e53b2af23c1598713e5e808.jpg;md5;367b30616fb382b237c4b9105e41d5f2",
   "wallpaper": "https://pictures.catvod.eu.org/",
   "danmaku": "https://danmu-api-two-pi.vercel.app/87654321/danmaku",
   "sites": [
     {
-      "key": "csp_Anime1",
-      "name": "Anime1動畫線上看",
+      "key": "Anime1",
+      "name": "🤣A1 ┃动漫",
       "type": 3,
-      "api": "csp_Anime1",
-      "ext": "https://cdn.jsdelivr.net/gh/king31521/JavaScript@main/anime1.js",
-      "searchable": 1,
-      "quickSearch": 1,
-      "filterable": 1,
-      "changeable": 1
+      "api": "https://cdn.jsdmirror.com/gh/ouhaibo1980/tvbox@main/js/drpy2.min.js",
+      "ext": "https://cdn.jsdmirror.com/gh/ouhaibo1980/tvbox@main/js/Anime1.js"
     },
     {
       "key": "csp_Hanime1",
       "name": "Hanime1",
       "type": 3,
       "api": "csp_Hanime1",
-      "searchable": 1,
-      "quickSearch": 1,
-      "filterable": 1,
-      "changeable": 1,
       "ext": "https://cdn.jsdelivr.net/gh/king31521/JavaScript@main/hanime1.js"
     },
     {
