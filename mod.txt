@@ -405,6 +405,9 @@ HAPPY,udp://@224.1.4.186:11111/
 香蕉台,udp://@224.1.4.205:11111
 JStar極限台電影頻道,udp://@230.1.2.152:11111
 henati,http://u.vipl.one/high/ierw63qgf1/1693.m3u8
+Henati,http://cdntv.online/high/ynemik5cl9/1693.mpeg
+henati,http://rr3.tvdosug.net/~2011503cbe66b502e11dd75bce30c2fe6d6/94683/hls/pl.m3u8
+奧視2,http://lhzb.lmllml.top:8000/play/Njk4NDo3.flv?token=JqdHv4bKJjaV7WIcEVUiag&exp=4102444800&sign=6b8b4639f35d4f24f450b9698ecc86ee
 奧視2,http://125.227.210.55:3031/VideoInput/play.ts
 奧視2,http://125.227.210.55:1022/VideoInput/play.ts
 奧視2,https://z3.ubtvfans.com/live/rx5/2916/e6fef1f52b41a9f7c8661ce1a3ac95b8/index.m3u8
