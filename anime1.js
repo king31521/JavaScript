@@ -2,6 +2,7 @@
   "spider": "https://ncstatic-file.clewm.net/rsrc/2026/0820/00/6f1e49c30e53b2af23c1598713e5e808.jpg;md5;367b30616fb382b237c4b9105e41d5f2",
   "wallpaper": "https://pictures.catvod.eu.org/",
   "danmaku": "https://danmu-api-two-pi.vercel.app/87654321/danmaku",
+  "adblock":{"gjc":[".lz",".ff",".mstop",".bfz"],"jxurl":"http://jx.84jia.com/fflzm3u8ts.php?url="},
   "sites": [
     {
       "key": "Anime1",
