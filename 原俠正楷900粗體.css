@@ -1,0 +1,16 @@
+@import url("https://cdn.jsdelivr.net/gh/king31521/JavaScript@refs/heads/main/GuanKiapTsingKhai-W-base64.css");
+
+html, body, input, textarea, button, select {
+  font-family: "GuanKiapTsingKhai-W", "Microsoft JhengHei", sans-serif !important;
+  font-weight: 900 !important;
+}
+
+body *:not(svg):not(path):not(use):not(i):not(.fa):not([class*="fa-"]):not(.material-icons):not([class*="material"]):not([class*="icon"]):not(code):not(pre) {
+  font-family: "GuanKiapTsingKhai-W", "Microsoft JhengHei", sans-serif !important;
+  font-weight: 900 !important;
+}
+
+body *::before, body *::after {
+  font-family: inherit !important;
+  font-weight: inherit !important;
+}
