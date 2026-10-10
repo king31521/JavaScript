@@ -3,8 +3,8 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Changes the styles of the current page
-// @match        https://www.gululu.world/book*
-// @match        https://ngabbs.com/*
+// @match        www.gululu.world/book*
+// @match        ngabbs.com/*
 // @grant        none
 // ==/UserScript==
 
