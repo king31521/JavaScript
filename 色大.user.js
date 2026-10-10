@@ -9,13 +9,31 @@
 // ==/UserScript==
 
 (function() {
-    var newSS, styles='* { background: #C7EDCC ! important; color: black !important; line-height: 160% !important; font-size: 25pt !important; letter-spacing:2px !important } :link, :link * { color: #0000EE !important } :visited, :visited * { color: #551A8B !important }';
-    if(document.createStyleSheet) {
-        document.createStyleSheet("javascript:'"+styles+"'");
-    } else {
-        newSS=document.createElement('link');
-        newSS.rel='stylesheet';
-        newSS.href='data:text/css,'+escape(styles);
-        document.getElementsByTagName("head")[0].appendChild(newSS);
-    }
+  var ID = 'se-da-style';
+  var styles = [
+    '* {',
+    '  background: #C7EDCC !important;',
+    '  color: black !important;',
+    '}',
+    'p, span, a, li, td, th, dt, dd, label, blockquote, figcaption, caption, h1, h2, h3, h4, h5, h6 {',
+    '  font-size: 25pt !important;',
+    '  line-height: 160% !important;',
+    '  letter-spacing: 2px !important;',
+    '}',
+    ':link, :link * { color: #0000EE !important }',
+    ':visited, :visited * { color: #551A8B !important }'
+  ].join('\n');
+
+  function inject() {
+    if (document.getElementById(ID)) return;
+    var el = document.createElement('style');
+    el.id = ID;
+    el.textContent = styles;
+    (document.head || document.documentElement).appendChild(el);
+  }
+
+  inject();
+
+  var mo = new MutationObserver(inject);
+  mo.observe(document.documentElement, { childList: true, subtree: true });
 })();
