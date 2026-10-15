@@ -8,7 +8,7 @@
       "playerType": 1
     },
     {
-      "name": "tv111",
+      "name": "私人頻道543",
       "type": 0,
       "url": "https://raw.githubusercontent.com/king31521/JavaScript/refs/heads/main/%E7%A7%81%E4%BA%BA%E9%A0%BB%E9%81%93543.json",
       "ua": "okhttp/4.12.0",
