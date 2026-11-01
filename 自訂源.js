@@ -8,9 +8,9 @@
       "playerType": 1
     },
     {
-      "name": "543tv",
+      "name": "成人直播",
       "type": 0,
-      "url": "https://raw.githubusercontent.com/accordcm/accordcm.github.io/refs/heads/main/543tv.json",
+      "url": "https://raw.githubusercontent.com/woshishiq1/hipy-drpy2/refs/heads/main/jaychouqq/%E6%88%90%E4%BA%BA%E7%9B%B4%E6%92%AD.txt",
       "ua": "okhttp/4.12.0",
       "playerType": 1
     },
